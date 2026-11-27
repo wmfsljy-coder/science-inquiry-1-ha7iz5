@@ -49,7 +49,7 @@
           <div class="story"><div class="who">👨‍🔬</div><div class="say"><span class="name">갈릴레이</span>“공을 그냥 떨어뜨리면 1초 만에 끝나 버려. 우리 물시계는 0.1초쯤 어긋나니 그걸로는 잴 수가 없지. 길이 5 m 빗면의 기울기를 줄여 공이 굴러 내려가는 시간을 늘려 보게. 시간 오차가 <b>4% 이하</b>가 되도록. 그리고 무거운 쇠공과 가벼운 나무공을 <b>같은 기울기에서</b> 둘 다 굴려 비교해 보게.”</div></div>
           <figure class="hero-art"><img src="img/incline-workshop.webp" alt="1600년대 파도바의 작업실을 블록처럼 잘라 낸 모형. 홈을 판 긴 나무 빗면 위로 청동 공이 굴러 내려가고, 학자와 공책에 적는 조수가 지켜본다. 창가에는 물통이 받침대 위에서 가는 물줄기를 저울 위 작은 유리잔에 흘려보내고, 앞면 단면에 벽돌과 돌로 된 바닥이 보인다." width="900" height="900" loading="lazy"><figcaption><b>갈릴레이는 떨어지는 물체를 재려고 공을 비탈에 눕혔습니다</b> 공을 그냥 떨어뜨리면 1초 남짓 만에 끝나 버려, 정밀한 시계가 없던 시대에는 잴 방법이 없었습니다. 갈릴레이는 홈을 판 긴 나무 빗면에 청동 공을 굴려 낙하를 느리게 만들고, 통에서 흘러나온 물의 무게로 시간을 쟀습니다. 빗면을 얼마나 눕혀야 잴 수 있는지는 아래 모형에서 직접 찾아보세요.</figcaption></figure>
           <div class="stage-card">
-            <div class="canvas-wrap studio"><canvas id="a-c-inc" width="900" height="470"></canvas></div>
+            <div class="canvas-wrap studio" data-kind="model calc" data-kind-pos="tl"><canvas id="a-c-inc" width="900" height="470"></canvas></div>
             <div class="sim-side">
               <div class="readout" id="a-inc-read"></div>
               <div class="ctrl-group">
@@ -68,7 +68,7 @@
         </section>
 
         <section class="scene" data-title="고르게 울리는 종">
-          <div class="story"><div class="who">🔔</div><div class="say"><span class="name">갈릴레이</span>“빗면에 작은 종을 달아, 공이 지나가면 ‘딩’ 울리게 했네. 종소리가 <b>똑같은 박자로</b> 울리게 하려면 종을 어떤 간격으로 달아야 할까? 박자가 고르면 같은 시간 동안 공이 간 거리를 알 수 있지. 음악가의 귀는 박자가 조금만 어긋나도 알아채거든.” <small style="color:var(--mist)">※ 종을 단 빗면은 갈릴레이의 기록이 아니라 후대 과학사가들의 복원입니다.</small></div></div>
+          <div class="story"><div class="who">🔔</div><div class="say"><span class="name">갈릴레이</span>“빗면에 작은 종을 달아, 공이 지나가면 ‘딩’ 울리게 했네. 종소리가 <b>똑같은 박자로</b> 울리게 하려면 종을 어떤 간격으로 달아야 할까? 박자가 고르면 같은 시간 동안 공이 간 거리를 알 수 있지. 음악가의 귀는 박자가 조금만 어긋나도 알아채거든.” <small style="color:var(--mist)">※ 종을 단 빗면은 갈릴레이의 기록에는 나오지 않습니다. 19세기 초 시범용 장치와 오늘날의 재현 실험으로 널리 알려졌습니다.</small></div></div>
           <div class="stage-card">
             <div class="canvas-wrap studio"><canvas id="a-c-bell" width="900" height="400"></canvas></div>
             <div class="controls">
@@ -102,6 +102,15 @@
           <div class="stage-card" style="padding:6px 0 4px;margin-top:16px"><div id="wk1"></div></div>
         </section>
       </div>
+      <details class="model-gap"><summary>🔍 이 모형이 실제와 다른 점</summary>
+      <ul>
+      <li><b>모형에서는</b> 공이 미끄러지지 않고 구르며 마찰과 공기 저항이 없다고 두어, 내려가는 시간을 식 하나(가속도 = 5/7 × g × sin θ)로 계산합니다. <b>실제로는</b> 홈과 공 사이의 마찰, 공이 홈의 양쪽 벽에 닿아 구르는 방식, 빗면의 휨 때문에 공은 식보다 조금 늦게 내려옵니다. 그래서 실제 실험에서는 같은 기울기에서 여러 번 굴려 평균을 냅니다.</li>
+      <li><b>모형에서는</b> 물시계의 시간 오차를 언제나 0.1초로 일정하게 둡니다. <b>실제로는</b> 갈릴레이는 큰 물통에서 흘러나온 물을 저울로 달아 시간을 쟀습니다. 오차는 물줄기를 열고 닫는 손의 반응, 물통의 물높이 변화 등에 따라 그때그때 달라집니다.</li>
+      <li><b>모형에서는</b> 쇠공과 나무공을 모두 속이 꽉 찬 같은 크기의 공으로 보고 같은 식을 씁니다. <b>실제로는</b> 속이 빈 공이나 표면이 거친 공은 구르는 방식이 달라 같은 빗면에서도 더 늦게 내려올 수 있어서, 비교할 때는 공의 모양과 표면도 같게 맞춰야 합니다.</li>
+      <li><b>모형에서는</b> 공이 종 아래를 지나는 순간 소리가 나고, 그 박자를 정확히 들을 수 있습니다. <b>실제로는</b> 종을 단 빗면은 갈릴레이의 기록에는 나오지 않고, 19세기 초에 만든 시범용 장치와 오늘날의 재현 실험으로 널리 알려졌습니다. 재현 실험에서는 종이나 줄이 공의 빠르기를 조금 줄이고, 박자를 귀로 판단하는 데에도 한계가 있습니다.</li>
+      </ul>
+      <p class="gap-src"><b>자료 출처</b> · 그림의 수치는 수업용으로 정한 값입니다(빗면 길이 5 m, 중력 가속도 9.8 m/s²). 바탕 자료: 갈릴레이 『두 새로운 과학』(1638)에 적힌 빗면 실험, 2022 개정 교육과정 과학탐구실험1 교과서.</p>
+      </details>
       <p class="teacher-note">교사용: 주소 끝에 <a href="?open=1">?open=1</a>을 붙이면 교사 미리 보기로 열립니다.</p>
     </section>
 
@@ -149,7 +158,7 @@
         <section class="scene" data-title="1 m의 역사">
           <div class="story"><div class="who">📏</div><div class="say"><span class="name">과학관 해설사 (오늘날)</span>“측우기의 깊이도 결국 ‘자’로 잽니다. 그 자의 기준은 어떻게 정해 왔을까요? 사람의 팔에서 빛의 속력까지, 단위의 역사를 끝까지 따라가 보세요.”</div></div>
           <div class="stage-card">
-            <div class="canvas-wrap studio"><canvas id="b-c-era" width="900" height="380"></canvas></div>
+            <div class="canvas-wrap studio" data-kind="sketch"><canvas id="b-c-era" width="900" height="380"></canvas></div>
             <div class="controls">
               <div class="ctrl-group" style="flex:1 1 100%">
                 <div class="ctrl-label">시대<span class="val" id="b-era-val">고대 이집트</span></div>
@@ -179,6 +188,15 @@
           <div class="stage-card" style="padding:6px 0 4px;margin-top:16px"><div id="wk2"></div></div>
         </section>
       </div>
+      <details class="model-gap"><summary>🔍 이 모형이 실제와 다른 점</summary>
+      <ul>
+      <li><b>모형에서는</b> 비가 바람 없이 곧게, 고르게 떨어지고, 그릇에 들어온 물은 하나도 사라지지 않습니다. <b>실제로는</b> 바람이 불면 그릇 둘레에서 빗방울이 비껴 날아가 덜 들어오고, 증발하거나 가장자리에서 튀어 나가는 물도 있어서 우량계 값은 실제 내린 양보다 조금 적게 나오기 쉽습니다.</li>
+      <li><b>모형에서는</b> 그릇의 모양과 크기만 바꿉니다. <b>실제로는</b> 그릇을 놓는 높이와 둘레의 건물·나무도 들어오는 빗물에 영향을 주어서, 측우기는 받침돌(측우대) 위 탁 트인 곳에 두었습니다. 오늘날 관측소도 설치 장소와 높이를 기준에 맞춰 정합니다.</li>
+      <li><b>모형에서는</b> 고인 물의 깊이를 정확한 눈금으로 바로 읽습니다. <b>실제로는</b> 측우기에서는 주척이라는 자를 세워 깊이를 자·치·푼 단위로 읽었기 때문에, 자를 세우는 자리와 눈금을 읽는 눈높이에 따라 작은 읽기 오차가 생겼습니다. 오늘날에는 빗물을 깔때기로 모아 자동으로 재는 우량계를 많이 씁니다.</li>
+      <li><b>모형에서는</b> ‘1 m의 역사’ 연표에서 시대마다 기준을 하나씩만 보여 줍니다. <b>실제로는</b> 한 시대 안에서도 여러 기준이 함께 쓰였습니다. 또 1799년에 정한 미터는 자오선 측량의 오차 때문에 ‘북극~적도 거리의 1000만분의 1’보다 조금(약 0.2 mm) 짧았습니다.</li>
+      </ul>
+      <p class="gap-src"><b>자료 출처</b> · 그림의 수치는 수업용으로 정한 값입니다(내린 비 30 mm). 바탕 자료: 국제도량형국(BIPM) 국제단위계(SI) 안내서, 2022 개정 교육과정 과학탐구실험1 교과서. 이 소단원의 실제 자료 카드: 미국 항공우주국(NASA) POWER 자료 서비스 — 서울(북위 37.57°, 동경 126.98°) 달마다 내린 비의 양, 1981~2024년 평균(약 50 km 격자 평균이라 서울 관측소 값보다 조금 적게 나옴). 기상청 날씨누리 과거 관측 일별 자료, 창원(155) 일강수량을 달마다 더한 1991 ~ 2020년 30년 평균.</p>
+      </details>
       <p class="teacher-note">교사용: 주소 끝에 <a href="?open=1">?open=1</a>을 붙이면 교사 미리 보기로 열립니다.</p>
     </section>
 
@@ -204,7 +222,7 @@
         <section class="scene" data-title="원소 카드 늘어놓기">
           <div class="story"><div class="who">🃏</div><div class="say"><span class="name">멘델레예프</span>“원소 이름, 원자량, 성질을 카드에 적어 원자량 순으로 늘어놓았네. 한 줄에 몇 장씩 끊어 놓아야 <b>성질이 비슷한 원소들이 세로로 나란히</b> 설까? 같은 색은 성질이 비슷한 원소 가족이야.”</div></div>
           <div class="stage-card">
-            <div class="canvas-wrap studio"><canvas id="c-c-tab" width="900" height="400"></canvas></div>
+            <div class="canvas-wrap studio" data-kind="text"><canvas id="c-c-tab" width="900" height="400"></canvas></div>
             <div class="controls">
               <div class="ctrl-group">
                 <div class="ctrl-label">한 줄에 놓는 카드 수<span class="val" id="c-w-val">6장</span></div>
@@ -219,7 +237,7 @@
         <section class="scene" data-title="빈칸의 원소 — 에카규소">
           <div class="story"><div class="who">❓</div><div class="say"><span class="name">멘델레예프</span>“규소 아래 칸이 비어 있네. 아직 발견되지 않은 원소가 있다는 뜻이지. 나는 이것을 ‘에카규소’라 부르겠네. 위·아래, 왼쪽·오른쪽 이웃의 원자량을 보고 이 원소의 원자량을 예측해 보게. 실제로 발견되면 확인할 수 있을 걸세. (그때는 왼쪽 갈륨도 아직 빈칸이었지만, 여기서는 오늘날의 값으로 해 보세.)”</div></div>
           <div class="stage-card">
-            <div class="canvas-wrap studio"><canvas id="c-c-eka" width="900" height="380"></canvas></div>
+            <div class="canvas-wrap studio" data-kind="text calc"><canvas id="c-c-eka" width="900" height="380"></canvas></div>
             <div class="sim-side">
               <div class="readout" id="c-eka-read"></div>
               <div class="ctrl-group">
@@ -242,7 +260,7 @@
                 <div class="seg" id="c-case"><button class="on" data-v="0">미적분학</button><button data-v="1">자연선택설</button><button data-v="2">전화기</button><button data-v="3">산소의 발견</button></div>
               </div>
             </div>
-            <div class="canvas-wrap studio"><canvas id="c-c-sim" width="900" height="380"></canvas></div>
+            <div class="canvas-wrap studio" data-kind="sketch"><canvas id="c-c-sim" width="900" height="380"></canvas></div>
             <div class="info-card" id="c-sim-info"></div>
           </div>
           <div id="c-sim-pick"></div>
@@ -260,6 +278,16 @@
           <div class="stage-card" style="padding:6px 0 4px;margin-top:16px"><div id="wk3"></div></div>
         </section>
       </div>
+      <details class="model-gap"><summary>🔍 이 모형이 실제와 다른 점</summary>
+      <ul>
+      <li><b>모형에서는</b> 원소 카드에 오늘날의 원자량을 소수 첫째 자리까지 적었습니다. <b>실제로는</b> 1869년에는 측정 기술이 부족해 몇몇 원소의 원자량이 오늘날 값과 달랐고, 멘델레예프는 성질에 맞지 않는 원소 몇 가지의 원자량이 잘못 측정되었다고 보고 고쳐 적기도 했습니다.</li>
+      <li><b>모형에서는</b> 카드가 원자량 순서로 놓인다고 하지만, 아르곤(39.9)이 칼륨(39.1)보다 무거운데도 앞에 놓여 있습니다. <b>실제로는</b> 오늘날 원소의 순서를 정하는 것은 원자량이 아니라 원자 번호(양성자 수)입니다. 또 비활성 기체는 1890년대에 발견되어, 1869년의 표에는 없었습니다.</li>
+      <li><b>모형에서는</b> 한 줄에 놓는 카드 수만 정하면 성질이 비슷한 가족이 깔끔하게 세로로 모입니다. <b>실제로는</b> 1869년에 알려진 원소는 60가지 남짓이었고, 멘델레예프의 첫 표는 오늘날 표와 가로·세로가 바뀐 모양이었습니다. 성질이 어느 가족에 넣기 애매한 원소도 있어서 표는 여러 번 고쳐졌습니다.</li>
+      <li><b>모형에서는</b> 빈칸 둘레 원소의 원자량을 오늘날의 값으로 줍니다. <b>실제로는</b> 멘델레예프가 예측할 때 쓴 1871년의 값은 이와 조금 달랐습니다. 또 원자량은 섞여 있는 동위원소의 비율에 따라 시료마다 조금씩 달라질 수 있어, 오늘날에도 범위로 적는 원소가 있습니다.</li>
+      <li><b>모형에서는</b> 동시 발견 연표에 사건 몇 가지와 그 해만 골라 놓았습니다. <b>실제로는</b> 누가 먼저였는지는 편지·원고·출판 날짜를 두고 오랫동안 논쟁이 된 경우가 많고, 같은 사건도 자료에 따라 연도가 조금 다르게 적히기도 합니다.</li>
+      </ul>
+      <p class="gap-src"><b>자료 출처</b> · 카드의 원자량은 오늘날의 값을 수업용으로 줄여 적은 것입니다. 이 소단원의 실제 자료 카드: 미국 국립보건원 PubChem 주기율표(원자량, 밀도 g/cm³)와 멘델레예프의 예측값(1871). 바탕 자료: 2022 개정 교육과정 과학탐구실험1 교과서.</p>
+      </details>
       <p class="teacher-note">교사용: 주소 끝에 <a href="?open=1">?open=1</a>을 붙이면 교사 미리 보기로 열립니다.</p>
     </section>
 
@@ -307,34 +335,34 @@
 </div>
 
 <button class="theme-toggle" id="themeToggle">라이트 모드</button>
-<script src="../assets/theme.js?v=c3418585"></script>
+<script src="../assets/theme.js?v=b0f7ed73"></script>
 <script src="../assets/scope.js?v=cecf172a"></script>
 <script src="../assets/kit.js?v=94e3bd47"></script>
 <script src="../assets/story.js?v=cd80882e"></script>
 <script src="../assets/quiz.js?v=d1e13494"></script>
-<script src="../assets/lab.js?v=5ab4e410"></script>
+<script src="../assets/lab.js?v=8e2a04e0"></script>
 <script src="../assets/share-config.js?v=645d418e"></script>
 <script src="../assets/share.js?v=8ebc37fa"></script>
 <script src="../assets/account.js?v=435378ac"></script>
-<script src="episodes.js"></script>
-<script src="worked.js"></script>
-<script src="handoff.js"></script>
-<script src="quiz-items.js"></script>
+<script src="episodes.js?v=0e3e9e63"></script>
+<script src="worked.js?v=feb1153e"></script>
+<script src="handoff.js?v=5af815af"></script>
+<script src="quiz-items.js?v=537f1732"></script>
 <script src="../assets/review.js?v=c07fe051"></script>
 <script src="../assets/peer.js?v=b6f0b008"></script>
 <script src="../assets/qboard.js?v=b3bb8d32"></script>
-<script src="lab-cases.js"></script>
+<script src="lab-cases.js?v=568eb91e"></script>
 <script src="../assets/inquiry.js?v=405fc23c"></script>
-<script src="inquiry-items.js"></script>
+<script src="inquiry-items.js?v=5354fabb"></script>
 <script src="../assets/link.js?v=48d3d217"></script>
-<script src="data/elements.js"></script>
-<script src="data/seoul-rain.js"></script>
-<script src="data/cw155.js"></script>
-<script src="real-cases.js"></script>
+<script src="data/elements.js?v=b85297dd"></script>
+<script src="data/seoul-rain.js?v=fb734489"></script>
+<script src="data/cw155.js?v=03f6a79b"></script>
+<script src="real-cases.js?v=d478f47c"></script>
 <script src="../assets/precheck.js?v=6e00687c"></script>
-<script src="precheck-items.js"></script>
-<script src="try-items.js"></script>
-<script src="scale-items.js"></script>
+<script src="precheck-items.js?v=263167df"></script>
+<script src="try-items.js?v=5b71d015"></script>
+<script src="scale-items.js?v=caaddd28"></script>
 <script src="https://wmfsljy-coder.github.io/science-teacher-hub-qtrqwc/assets/video-links.js" defer></script>
 </body>
 </html>

@@ -175,7 +175,7 @@
         h: H_,
         canvas: function (h) {
           var wrap = el("div", "canvas-wrap"), cv = document.createElement("canvas");
-          cv.width = 900; cv.height = h || 360; wrap.appendChild(cv);
+          cv.width = 900; cv.height = h || 360; wrap.appendChild(cv); if (c.kind) wrap.setAttribute("data-kind", c.kind); if (c.kindPos) wrap.setAttribute("data-kind-pos", c.kindPos);
           cv.setAttribute("aria-label", c.title + " — 조작에 따라 바뀌는 그림. 수치와 판정은 그림 아래 글로도 나옵니다.");
           stage.insertBefore(wrap, ctrls);                       /* 그림은 늘 조작 칸 위에 */
           var ctx = window.setupCanvas(cv);
@@ -416,6 +416,7 @@
         var s = st[c.id] || {};
         return "<span class='real-tag'>📊 실제 자료</span>" + (sub ? "<span class='real-pill'>" + sub + "</span>" : "") + (s.ok ? "<span class='real-pill'>✅ 해결</span>" : "") + "<b>" + c.title + "</b>";
       }, function (inner) { if (!made) { made = true; make(c, ci, inner); } });
+      if (c.kind || c.kindPos) { var lastBox = wrapOf(panel).lastElementChild; if (lastBox) { if (c.kind) lastBox.setAttribute("data-kind", c.kind); if (c.kindPos) lastBox.setAttribute("data-kind-pos", c.kindPos); } }
     });
     /* 실제 자료 탭에 함께 있던 선택 활동(우리 반 측정값·근거 카드 토론)도 같은 모양의 카드로 */
     Array.prototype.forEach.call(document.querySelectorAll(".sec-more"), function (m) {

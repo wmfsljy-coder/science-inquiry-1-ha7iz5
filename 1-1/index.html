@@ -49,7 +49,7 @@
           <div class="story"><div class="who">⏱️</div><div class="say"><span class="name">물리학자 인터뷰</span>“빛은 730 km를 약 2.435 밀리초에 갑니다. 중성미자가 60 나노초 빨랐다는 건 빛보다 겨우 0.0025 %(약 4만분의 1) 빠르다는 뜻이에요. 그런데 만약 장비의 시계가 <b>몇십 나노초</b>만 어긋나 있었다면? 측정 장비의 시간 오차를 바꿔 보며, 중성미자의 속력이 <b>정확히 빛과 같아지는</b> 오차를 찾아보세요.”</div></div>
           <figure class="hero-art"><img src="img/neutrino-beam.webp" alt="스위스의 가속기 연구소에서 알프스를 지나 이탈리아의 바위산까지 길게 잘라 낸 땅 모형. 앞면 단면의 층층 바위 속을 분홍 점선이 곧게 지나 산 아래 지하 실험실의 검출기에 닿고, 하늘에는 GPS 위성 두 대가 떠 있다." width="900" height="900" loading="lazy"><figcaption><b>중성미자는 730 km 바위를 터널 없이 그냥 지나갑니다</b> 2011년 CERN에서 쏜 중성미자는 알프스 아래 바위를 뚫고 730 km 떨어진 그란사소 지하 실험실의 검출기에 닿았습니다. 출발과 도착 시각은 GPS 신호로 맞춘 두 곳의 시계로 쟀고, 2.4 밀리초 남짓한 비행시간을 나노초 단위까지 가려내야 했습니다. 그 시계를 얼마나 믿을 수 있었는지는 아래 모형에서 따져 보세요. <span class="art-note">⚠ 실제 730 km 구간을 한 블록에 줄여 그렸습니다.</span></figcaption></figure>
           <div class="stage-card">
-            <div class="canvas-wrap studio"><canvas id="a-c-nu" width="900" height="620"></canvas></div>
+            <div class="canvas-wrap studio" data-kind="model calc" data-kind-pos="tl"><canvas id="a-c-nu" width="900" height="620"></canvas></div>
             <div class="sim-side">
               <div class="readout" id="a-nu-read"></div>
               <div class="ctrl-group">
@@ -67,7 +67,7 @@
         <section class="scene" data-title="동료 검토 — 몇 명이 보아야 걸러질까">
           <div class="story"><div class="who">🧑‍🔬</div><div class="say"><span class="name">학술지 편집자</span>“한 명의 검토자가 논문 속 오류를 발견할 확률이 30%라고 해 봅시다. 여러 명이 <b>따로따로</b> 검토하면 적어도 한 명이 오류를 찾을 확률은 1 − 0.7ⁿ이에요. 오류를 <b>95% 이상</b> 걸러 내려면 검토자가 적어도 몇 명 필요할까요? 너무 많이 부르면 심사가 한없이 늦어지니 가장 적은 수를 찾아 주세요.”</div></div>
           <div class="stage-card">
-            <div class="canvas-wrap studio"><canvas id="a-c-pr" width="900" height="280"></canvas></div>
+            <div class="canvas-wrap studio" data-kind="model calc"><canvas id="a-c-pr" width="900" height="280"></canvas></div>
             <div class="sim-side">
               <div class="readout" id="a-pr-read"></div>
               <div class="ctrl-group">
@@ -98,6 +98,15 @@
           <div class="stage-card" style="padding:6px 0 4px;margin-top:16px"><div id="wk1"></div></div>
         </section>
       </div>
+      <details class="model-gap"><summary>🔍 이 모형이 실제와 다른 점</summary>
+      <ul>
+      <li><b>모형에서는</b> 측정 장비의 오차가 ‘도착 시각을 이르게 잰 오차’ 하나뿐이고, 그 크기를 슬라이더로 정확히 알 수 있습니다. <b>실제로는</b> 헐거운 광섬유 케이블 연결과 시계 장치의 작은 오차처럼 여러 원인이 겹쳐 있었고, 연구팀도 처음에는 그 원인을 찾지 못해 다른 연구자들에게 검토를 요청했습니다.</li>
+      <li><b>모형에서는</b> 중성미자 한 개가 빛과 나란히 달리는 경주처럼 그렸습니다. <b>실제로는</b> 중성미자는 하나씩 시간을 잴 수 없어서, 양성자 묶음으로 만든 수많은 중성미자 가운데 검출기에 잡힌 1만 개가 넘는 사건의 도착 시각 분포를 출발 신호의 모양과 비교해 평균적인 차이를 구했습니다.</li>
+      <li><b>모형에서는</b> 730 km 구간과 지구의 굽음, 산의 높이를 한 블록 안에 크게 과장해 그렸습니다. <b>실제로는</b> 빔은 땅속 바위를 곧게 지나가고, 두 실험실 사이의 거리와 시계도 GPS 측량과 GPS 신호로 아주 정밀하게 맞춰야 했습니다. 몇십 나노초를 가리려면 케이블 길이에서 생기는 신호 지연까지 따져야 합니다.</li>
+      <li><b>모형에서는</b> 검토자 모두가 똑같이 30%의 확률로, 서로 상관없이(독립적으로) 오류를 찾는다고 둡니다. <b>실제로는</b> 검토자마다 전문 분야와 꼼꼼함이 다르고 같은 종류의 오류를 함께 놓치기도 해서, 사람 수를 늘린 만큼 확률이 오르지는 않습니다. 실제 학술지는 보통 두세 명이 검토하고, 출판 뒤 다른 연구팀의 재현으로 검증이 이어집니다.</li>
+      </ul>
+      <p class="gap-src"><b>자료 출처</b> · 그림의 수치는 수업용으로 단순하게 정한 값입니다(거리 약 730 km, ‘빛보다 약 60 나노초 빨랐다’는 발표만 실제 보고 값). 바탕 자료: OPERA 연구팀의 발표(2011)와 정정(2012), ICARUS 연구팀의 측정(2012), 유럽 입자 물리 연구소(CERN) 공개 자료, 2022 개정 교육과정 과학탐구실험1 교과서.</p>
+      </details>
       <p class="teacher-note">교사용: 주소 끝에 <a href="?open=1">?open=1</a>을 붙이면 교사 미리 보기로 열립니다.</p>
     </section>
 
@@ -175,6 +184,15 @@
           <div class="stage-card" style="padding:6px 0 4px;margin-top:16px"><div id="wk2"></div></div>
         </section>
       </div>
+      <details class="model-gap"><summary>🔍 이 모형이 실제와 다른 점</summary>
+      <ul>
+      <li><b>모형에서는</b> 지구를 가운데 고정하고, 금성이 태양에서 0.723 AU 떨어진 원을 회합 주기 584일 동안 일정한 빠르기로 돈다고 둡니다. <b>실제로는</b> 금성의 궤도는 원에 아주 가까운 타원이고, 지구 궤도면과 약 3.4° 기울어 있습니다. 584일은 평균값이라 회합 주기는 회합 때마다 며칠씩 달라집니다.</li>
+      <li><b>모형에서는</b> 천동설의 금성이 지구–태양 사이의 정해진 점을 중심으로 정해진 크기의 작은 원(주전원)을 돕니다. <b>실제로는</b> 프톨레마이오스의 모형에는 이심원 같은 장치가 더 들어 있었고, 주전원의 실제 크기나 거리는 정해지지 않고 비율만 정해졌습니다.</li>
+      <li><b>모형에서는</b> 접안렌즈 속 금성이 언제나 또렷하게 보입니다. <b>실제로는</b> 보름달 모양에 가까울 때 금성은 태양과 거의 같은 방향에 있어 햇빛에 묻혀 보기 어렵습니다. 갈릴레이의 망원경은 배율이 20~30배쯤에 시야가 좁고 상이 흐려서, 여러 달에 걸쳐 모양이 바뀌는 것을 이어서 관측해야 했습니다.</li>
+      <li><b>모형에서는</b> 은하 여덟 개의 거리와 멀어지는 속력을 수업용으로 정했고, 은하가 늘어나는 격자에 붙어 함께 멀어집니다. <b>실제로는</b> 허블의 1929년 자료는 은하 24개 정도였고, 거리를 너무 짧게 잰 탓에 기울기가 약 500 km/s/Mpc로 나왔습니다. 오늘날에는 더 정확한 거리 측정으로 이보다 훨씬 작은 값을 얻지만, 측정 방법에 따라 값이 조금씩 갈립니다. 또 가까운 은하들은 중력으로 묶여 있어 팽창을 따라 멀어지지 않고, 안드로메다 은하처럼 다가오는 은하도 있습니다.</li>
+      </ul>
+      <p class="gap-src"><b>자료 출처</b> · 은하 자료는 원리를 보이려고 만든 값입니다(금성 궤도 반지름 0.723 AU, 회합 주기 584일은 실제 평균값). 이 소단원의 실제 자료 카드: 미국 항공우주국 제트추진연구소(NASA JPL) Horizons 천체력 — 지구 중심에서 본 금성, 2025년 1월 1일 ~ 2026년 7월 1일, 5일 간격(밝게 보이는 부분 %, 겉보기 지름 ″, 지구와의 거리 AU, 태양과 벌어진 각). 바탕 자료: 허블의 은하 거리–속력 논문(1929), 2022 개정 교육과정 과학탐구실험1 교과서.</p>
+      </details>
       <p class="teacher-note">교사용: 주소 끝에 <a href="?open=1">?open=1</a>을 붙이면 교사 미리 보기로 열립니다.</p>
     </section>
 
@@ -222,32 +240,32 @@
 </div>
 
 <button class="theme-toggle" id="themeToggle">라이트 모드</button>
-<script src="../assets/theme.js?v=c3418585"></script>
+<script src="../assets/theme.js?v=b0f7ed73"></script>
 <script src="../assets/scope.js?v=cecf172a"></script>
 <script src="../assets/kit.js?v=94e3bd47"></script>
 <script src="../assets/story.js?v=cd80882e"></script>
 <script src="../assets/quiz.js?v=d1e13494"></script>
-<script src="../assets/lab.js?v=5ab4e410"></script>
+<script src="../assets/lab.js?v=8e2a04e0"></script>
 <script src="../assets/share-config.js?v=645d418e"></script>
 <script src="../assets/share.js?v=8ebc37fa"></script>
 <script src="../assets/account.js?v=435378ac"></script>
-<script src="episodes.js"></script>
-<script src="worked.js"></script>
-<script src="handoff.js"></script>
-<script src="quiz-items.js"></script>
+<script src="episodes.js?v=9a49cd1d"></script>
+<script src="worked.js?v=0960eb00"></script>
+<script src="handoff.js?v=3ff6faba"></script>
+<script src="quiz-items.js?v=663513ec"></script>
 <script src="../assets/review.js?v=c07fe051"></script>
 <script src="../assets/peer.js?v=b6f0b008"></script>
 <script src="../assets/qboard.js?v=b3bb8d32"></script>
-<script src="lab-cases.js"></script>
+<script src="lab-cases.js?v=cdbd0be7"></script>
 <script src="../assets/inquiry.js?v=405fc23c"></script>
-<script src="inquiry-items.js"></script>
+<script src="inquiry-items.js?v=fd03414d"></script>
 <script src="../assets/link.js?v=48d3d217"></script>
-<script src="data/venus-2025.js"></script>
-<script src="real-cases.js"></script>
+<script src="data/venus-2025.js?v=c1d04e7f"></script>
+<script src="real-cases.js?v=41420dbe"></script>
 <script src="../assets/precheck.js?v=6e00687c"></script>
-<script src="precheck-items.js"></script>
-<script src="try-items.js"></script>
-<script src="scale-items.js"></script>
+<script src="precheck-items.js?v=d520484a"></script>
+<script src="try-items.js?v=17a7dade"></script>
+<script src="scale-items.js?v=0346da6d"></script>
 <script src="https://wmfsljy-coder.github.io/science-teacher-hub-qtrqwc/assets/video-links.js" defer></script>
 </body>
 </html>
