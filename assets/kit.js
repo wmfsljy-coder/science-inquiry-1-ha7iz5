@@ -306,17 +306,83 @@
     ctx.strokeStyle = "#111622"; ctx.lineWidth = size * .22; ctx.strokeText(s, x, y);
     ctx.fillStyle = fill || "#ffffff"; ctx.fillText(s, x, y); ctx.lineJoin = "miter";
   };
+  /* 보는 방법: ax·bx(가로로 x·y가 퍼지는 정도), ay·by(세로), kz(높이 배율), fit(크기 맞춤: 숫자 또는 "w" = 폭 맞춤), dy(아래로 옮김) */
+  K.VIEWS = {
+    oblique: { ax: 0.866, bx: -0.866, ay: 0.5, by: 0.5, kz: 1, fit: 1 },
+    top: { ax: 0.866, bx: -0.866, ay: 0.78, by: 0.78, kz: 0.4, fit: 0.86, dy: -6 },
+    side: { ax: 1, bx: -0.3, ay: 0, by: 0.16, kz: 1, fit: "w" }
+  };
+  /* 그림 아래 '보는 방법' 단추 줄 — K.iso({ cv: canvas }) 를 부르면 저절로 한 번 생긴다 */
+  K.viewBar = function (cv) {
+    if (cv._viewBar || !cv.parentNode) return;
+    var wrap = cv.parentNode, bar = document.createElement("div"); bar.className = "view-bar";
+    cv._viewBar = bar;
+    if (!document.getElementById("view-bar-css")) {
+      var st = document.createElement("style"); st.id = "view-bar-css";
+      st.textContent = ".view-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 10px 8px;font:700 12.5px/1 'Gothic A1','Segoe UI',sans-serif;color:#475569}" +
+        ".view-bar b{font-weight:900;margin-right:2px}.view-bar button{font:inherit;padding:6px 10px;border-radius:999px;border:1.5px solid #cbd5e1;background:#fff;color:#334155;cursor:pointer}" +
+        ".view-bar button[aria-pressed=true]{background:#1e3a8a;border-color:#1e3a8a;color:#fff}.view-bar .vb-sep{width:1px;height:18px;background:#cbd5e1;margin:0 4px}";
+      document.head.appendChild(st);
+    }
+    function redraw() {
+      (cv._isos || []).forEach(function (I) { I.view(cv._isoView, cv._isoReal); });
+      if (typeof cv._redraw === "function") cv._redraw(); else if (window.redrawCanvases) window.redrawCanvases();
+      paint();
+    }
+    var btns = [], lab = document.createElement("b"); lab.textContent = "👁 보는 방법"; bar.appendChild(lab);
+    [["oblique", "비스듬히"], ["top", "위에서"], ["side", "단면(옆에서)"]].forEach(function (v) {
+      var b = document.createElement("button"); b.type = "button"; b.textContent = v[1]; b.setAttribute("data-v", v[0]);
+      b.addEventListener("click", function () { cv._isoView = v[0]; redraw(); });
+      bar.appendChild(b); btns.push(b);
+    });
+    var rb = null;
+    setTimeout(function () {
+      var ex = (cv._isos || []).reduce(function (m, I) { return Math.max(m, I.exag || 0); }, 0);
+      if (ex > 1) {
+        var sp = document.createElement("span"); sp.className = "vb-sep"; bar.appendChild(sp);
+        rb = document.createElement("button"); rb.type = "button";
+        rb.addEventListener("click", function () { cv._isoReal = !cv._isoReal; redraw(); });
+        bar.appendChild(rb); rb._ex = ex; paint();
+      }
+    }, 0);
+    function paint() {
+      btns.forEach(function (b) { b.setAttribute("aria-pressed", String((cv._isoView || "oblique") === b.getAttribute("data-v"))); });
+      if (rb) { rb.setAttribute("aria-pressed", String(!!cv._isoReal)); rb.textContent = cv._isoReal ? "📏 실제 비율 (높이 그대로)" : "📏 실제 비율로 보기 (지금 높이 " + rb._ex + "배 과장)"; }
+    }
+    paint();
+    if (cv.nextSibling) wrap.insertBefore(bar, cv.nextSibling); else wrap.appendChild(bar);
+  };
   K.iso = function (o) {
-    var ox = o.ox, oy = o.oy, s = o.s || 0.75, L = o.L, D = o.D, C = 0.866;
-    var I = { L: L, D: D, s: s };
-    I.P = function (x, y, z) { return { x: ox + (x - y) * C * s, y: oy + (x + y) * 0.5 * s - z * s }; };
+    /* 보는 방법 바꾸기(2026-11-27): o.cv(그 캔버스)를 넘기면 그림 아래에 '비스듬히 · 위에서 · 단면' 단추가 생기고,
+       캔버스(또는 그림 틀)에 data-exag="20" 처럼 높이 과장 배율을 적으면 '실제 비율' 단추도 생긴다. o.cv 가 없으면 지금처럼 비스듬히만.
+       비스듬히 = 원래 아이소메트릭. 위에서 = 높은 곳에서 내려다본 모습(땅 모양·넓이를 보기 좋게). 단면 = 앞면을 정면으로(깊이는 살짝만). */
+    var L = o.L, D = o.D, s0 = o.s || 0.75;
+    var ox, oy, s, ax, bx, ay, by, kz;
+    var I = { L: L, D: D, s: s0 };
+    I.view = function (name, real) {
+      var v = K.VIEWS[name] || K.VIEWS.oblique;
+      ax = v.ax; bx = v.bx; ay = v.ay; by = v.by;
+      var f = v.fit === "w" ? ((L + D) * 0.866) / (L * Math.abs(ax) + D * Math.abs(bx)) : v.fit;
+      s = s0 * Math.min(1.25, f);
+      var ex = real && I.exag > 1 ? 1 / I.exag : 1;
+      kz = v.kz * ex;
+      /* 바닥 한가운데가 원래 그림과 같은 자리에 오게 */
+      var cx = o.ox + (L / 2 - D / 2) * 0.866 * s0, cy = o.oy + (L / 2 + D / 2) * 0.5 * s0;
+      ox = cx - (L / 2 * ax + D / 2 * bx) * s; oy = cy - (L / 2 * ay + D / 2 * by) * s + (v.dy || 0);
+      I.s = s; I.viewName = v === K.VIEWS.oblique ? "oblique" : name; I.real = !!(real && I.exag > 1);
+    };
+    I.P = function (x, y, z) { return { x: ox + (x * ax + y * bx) * s, y: oy + (x * ay + y * by) * s - z * kz * s }; };
     I.face = function (ctx, side, fn) {
       ctx.save();
-      if (side === "front") ctx.transform(C * s, 0.5 * s, 0, -s, ox - C * s * D, oy + 0.5 * s * D);
-      else ctx.transform(-C * s, 0.5 * s, 0, -s, ox + C * s * L, oy + 0.5 * s * L);
+      if (side === "front") ctx.transform(ax * s, ay * s, 0, -kz * s, ox + bx * s * D, oy + by * s * D);
+      else ctx.transform(bx * s, by * s, 0, -kz * s, ox + ax * s * L, oy + ay * s * L);
       fn(side === "front" ? L : D);
       ctx.restore();
     };
+    var cv = o.cv || null;
+    I.exag = +(o.exag || (cv && (cv.getAttribute("data-exag") || (cv.parentNode && cv.parentNode.getAttribute && cv.parentNode.getAttribute("data-exag")))) || 0);
+    if (cv) { (cv._isos = cv._isos || []).push(I); K.viewBar(cv); }
+    I.view(cv && cv._isoView, cv && cv._isoReal);
     I.profile = function (ctx, side, zOf, z0) {
       var Lw = side === "front" ? L : D, u, st = Math.max(2, Lw / 90);
       ctx.beginPath(); ctx.moveTo(0, z0 || 0);
