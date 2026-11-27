@@ -48,6 +48,7 @@
         <section class="scene" data-title="60 나노초의 수수께끼">
           <div class="story"><div class="who">⏱️</div><div class="say"><span class="name">물리학자 인터뷰</span>“빛은 730 km를 약 2.435 밀리초에 갑니다. 중성미자가 60 나노초 빨랐다는 건 빛보다 겨우 0.0025 %(약 4만분의 1) 빠르다는 뜻이에요. 그런데 만약 장비의 시계가 <b>몇십 나노초</b>만 어긋나 있었다면? 측정 장비의 시간 오차를 바꿔 보며, 중성미자의 속력이 <b>정확히 빛과 같아지는</b> 오차를 찾아보세요.”</div></div>
           <figure class="hero-art"><img src="img/neutrino-beam.webp" alt="스위스의 가속기 연구소에서 알프스를 지나 이탈리아의 바위산까지 길게 잘라 낸 땅 모형. 앞면 단면의 층층 바위 속을 분홍 점선이 곧게 지나 산 아래 지하 실험실의 검출기에 닿고, 하늘에는 GPS 위성 두 대가 떠 있다." width="900" height="900" loading="lazy"><figcaption><b>중성미자는 730 km 바위를 터널 없이 그냥 지나갑니다</b> 2011년 CERN에서 쏜 중성미자는 알프스 아래 바위를 뚫고 730 km 떨어진 그란사소 지하 실험실의 검출기에 닿았습니다. 출발과 도착 시각은 GPS 신호로 맞춘 두 곳의 시계로 쟀고, 2.4 밀리초 남짓한 비행시간을 나노초 단위까지 가려내야 했습니다. 그 시계를 얼마나 믿을 수 있었는지는 아래 모형에서 따져 보세요. <span class="art-note">⚠ 실제 730 km 구간을 한 블록에 줄여 그렸습니다.</span></figcaption></figure>
+          <div class="pv" data-key="p1-2"><p class="pv-q">장비가 도착 시각을 이르게 잰 오차를 0에서 점점 키워 그만큼 바로잡으면, 계산되는 중성미자의 속력은 어떻게 변할까요?</p><button class="pv-o" data-why="오차를 바로잡으면 실제 도착 시각이 더 늦어져 비행시간이 길어집니다. 같은 거리를 더 오래 걸려 갔으니 속력은 오히려 작아집니다.">점점 빨라진다</button><button class="pv-o" data-ok>점점 느려진다</button><button class="pv-o" data-why="거리가 같으니 속력도 같을 것 같지만, 속력은 거리를 걸린 시간으로 나눈 값입니다. 시간 측정이 나노초 단위로만 바뀌어도 계산되는 속력이 달라집니다.">그대로다 — 측정한 거리는 바뀌지 않으므로</button><p class="pv-a">도착 시각을 이르게 잰 만큼 바로잡으면 비행시간이 길어져 계산되는 속력이 작아집니다. 이처럼 아주 작은 <b>측정 오차</b>도 ‘빛보다 빠르다’는 놀라운 결론을 만들거나 뒤집을 수 있습니다.</p></div>
           <div class="stage-card">
             <div class="canvas-wrap studio" data-kind="model calc" data-kind-pos="tl"><canvas id="a-c-nu" width="900" height="620"></canvas></div>
             <div class="sim-side">
@@ -66,6 +67,7 @@
 
         <section class="scene" data-title="동료 검토 — 몇 명이 보아야 걸러질까">
           <div class="story"><div class="who">🧑‍🔬</div><div class="say"><span class="name">학술지 편집자</span>“한 명의 검토자가 논문 속 오류를 발견할 확률이 30%라고 해 봅시다. 여러 명이 <b>따로따로</b> 검토하면 적어도 한 명이 오류를 찾을 확률은 1 − 0.7ⁿ이에요. 오류를 <b>95% 이상</b> 걸러 내려면 검토자가 적어도 몇 명 필요할까요? 너무 많이 부르면 심사가 한없이 늦어지니 가장 적은 수를 찾아 주세요.”</div></div>
+          <div class="pv" data-key="p1-3"><p class="pv-q">검토자를 한 명씩 늘려 가면, 적어도 한 명이 오류를 찾을 확률은 어떻게 늘어날까요?</p><button class="pv-o" data-why="확률을 그냥 더하면 될 것 같지만, 여러 검토자가 같은 오류를 겹쳐 찾기도 합니다. 그래서 확률은 모두가 함께 놓칠 확률이 줄어드는 만큼만 늘고, 100%를 넘지 않습니다.">한 명마다 30%씩 똑같이 늘어, 몇 명만 더 부르면 100%가 된다</button><button class="pv-o" data-why="한 사람의 실력은 그대로여도, 여러 사람이 따로 보면 모두가 함께 놓칠 확률이 점점 작아집니다. 그래서 적어도 한 명이 찾을 확률은 커집니다.">각자 30%밖에 못 찾으므로 몇 명이 보아도 30%에 머문다</button><button class="pv-o" data-ok>처음에는 크게 늘다가 점점 조금씩 늘며, 100%에 다가가지만 닿지는 않는다</button><p class="pv-a">모두가 오류를 놓칠 확률 0.7ⁿ은 검토자가 늘수록 거듭 곱해져 작아지므로, 찾을 확률은 처음에 빠르게 늘다가 점점 천천히 늘어 100%에 다가갑니다. 여러 과학자가 따로 살펴보는 <b>동료 검토</b>는 오류를 크게 줄이지만 완전히 없애지는 못합니다.</p></div>
           <div class="stage-card">
             <div class="canvas-wrap studio" data-kind="model calc"><canvas id="a-c-pr" width="900" height="280"></canvas></div>
             <div class="sim-side">
@@ -131,6 +133,7 @@
 
         <section class="scene" data-title="금성의 위상 — 두 모형의 예측">
           <div class="story"><div class="who">🔭</div><div class="say"><span class="name">천문 해설사</span>“천동설에서 금성은 늘 지구와 태양 <b>사이</b>의 작은 원(주전원)을 돌아요. <span data-view="law:지동설">지동설</span>에서는 금성이 태양 둘레를 돌지요. 두 모형에서 금성이 햇빛을 받는 모양을 시간에 따라 비교해 보세요. 갈릴레이는 금성이 <b>거의 보름달처럼 둥글게</b> 보이는 때를 관측했습니다. 어느 모형에서 그런 모양이 나올까요?”</div></div>
+          <div class="pv" data-key="p2-2"><p class="pv-q">천동설 모형(금성이 늘 지구와 태양 사이의 작은 원을 돎)에서 날수를 바꿔 가면, 지구에서 본 금성은 어떤 모양들로 보일까요?</p><button class="pv-o" data-ok>모양은 바뀌지만, 늘 반달보다 가는 초승달 모양이다</button><button class="pv-o" data-why="달은 지구 둘레를 돌며 태양 반대쪽에도 가기 때문에 보름달이 됩니다. 천동설의 금성은 늘 태양보다 지구 쪽에 있어, 햇빛을 받는 면의 대부분이 지구 반대쪽을 향합니다.">달처럼 초승달에서 보름달까지 모든 모양이 차례로 나타난다</button><button class="pv-o" data-why="금성은 매우 밝아 별처럼 보이지만 스스로 빛을 내지 못하고 햇빛을 반사합니다. 그래서 햇빛을 받는 면이 지구 쪽을 얼마나 향하느냐에 따라 모양이 달라집니다.">금성은 스스로 빛나므로 늘 둥글게 보인다</button><p class="pv-a">금성은 햇빛을 반사해 빛나므로 태양·금성·지구의 위치에 따라 모양, 곧 <b>위상</b>이 바뀝니다. 천동설 모형에서는 금성이 늘 지구와 태양 사이에 있어, 날수를 바꿔도 가는 초승달 모양만 나타납니다.</p></div>
           <div class="stage-card">
             <div class="canvas-wrap studio"><canvas id="b-c-ven" width="900" height="330"></canvas></div>
             <div class="sim-side">
@@ -152,6 +155,7 @@
 
         <section class="scene" data-title="허블의 그래프 — 멀수록 빨리 멀어진다">
           <div class="story"><div class="who">🌌</div><div class="say"><span class="name">우주론 해설사</span>“300년 뒤, 또 한 번 세계관이 바뀝니다. 우주는 영원히 그대로라고 믿던 때, 허블은 먼 은하일수록 빨리 멀어진다는 관측 자료를 내놓았어요. 은하 여덟 개의 거리와 멀어지는 속력에 가장 잘 맞는 직선(속력 = H × 거리)의 기울기 H를 찾아 주세요.”</div></div>
+          <div class="pv" data-key="p2-3"><p class="pv-q">은하 여덟 개의 점은 한 직선 위에 딱 놓여 있지 않습니다. ‘가장 잘 맞는 직선’은 어떤 직선일까요?</p><button class="pv-o" data-why="실제 관측값에는 측정 오차가 있어 점들이 한 직선 위에 놓이지 않습니다. 원점을 지나는 직선 하나로 여덟 점을 모두 지날 수는 없습니다.">점 여덟 개를 모두 지나는 직선</button><button class="pv-o" data-ok>몇몇 점은 비켜 가더라도, 점들과의 어긋남이 전체적으로 가장 작은 직선</button><button class="pv-o" data-why="먼 은하가 중요해 보이지만, 점 하나에만 맞추면 그 점의 측정 오차가 기울기를 그대로 좌우합니다. 모든 점을 고르게 따져야 믿을 만한 기울기가 나옵니다.">가장 멀리 있는 은하의 점을 정확히 지나는 직선</button><p class="pv-a">관측 자료에는 오차가 있어 점들이 흩어져 있으므로, 점들과의 <b>어긋남이 가장 작은 직선</b>을 찾아 기울기를 정합니다. 이 기울기 H는 은하가 거리에 비례해 멀어지는 빠르기, 곧 우주가 팽창하는 빠르기를 나타냅니다.</p></div>
           <div class="stage-card">
             <div class="canvas-wrap studio"><canvas id="b-c-hub" width="900" height="300"></canvas></div>
             <div class="sim-side">
@@ -240,7 +244,7 @@
 </div>
 
 <button class="theme-toggle" id="themeToggle">라이트 모드</button>
-<script src="../assets/theme.js?v=b0f7ed73"></script>
+<script src="../assets/theme.js?v=f0b96aff"></script>
 <script src="../assets/scope.js?v=cecf172a"></script>
 <script src="../assets/kit.js?v=94e3bd47"></script>
 <script src="../assets/story.js?v=cd80882e"></script>
