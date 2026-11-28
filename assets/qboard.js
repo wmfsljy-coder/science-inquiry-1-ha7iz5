@@ -24,12 +24,33 @@
     if (m.cls && m.nick) return { cls: m.cls, nick: m.nick, t: window.sthAccount && window.sthAccount.tokFor ? window.sthAccount.tokFor(m.nick) : "" };
     return window.sthAccount && window.sthAccount.ident ? window.sthAccount.ident(UID) : null;
   }
-  function call(body) {
-    var who = me(), u = url(); if (!u || !who) return Promise.reject(new Error("공유가 꺼져 있습니다"));
-    body.cls = who.cls; body.nick = who.nick; body.t = who.t || ""; body.unit = UID;
-    return fetch(u, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) })
-      .then(function (r) { return r.json(); });
+  function full(body, who) { body.cls = who.cls; body.nick = who.nick; body.t = who.t || ""; body.unit = UID; return body; }
+  /* 기다리지 않게(theme.js 의 sthNet): 남기기·'나도'·'이제 답할 수 있어요'는 보내기 줄에 넣고 화면에 바로 보인다.
+     qMark 는 on 값을 분명히 보내므로 다시 보내도 같고, qAdd 는 sthNet 이 다시 보내기 전에 목록에 이미 있는지 본다.
+     목록(qList)은 마지막으로 받은 것을 먼저 보인다 */
+  var NET = window.sthNet;
+  function base() { var who = me(); return who ? who.cls + "|" + who.nick + "|" + UID + "|" : ""; }
+  function queue(kind, body, tail) { var who = me(); if (!url() || !who) return ""; var k = kind + "|" + base() + tail; NET.send(k, full(body, who)); return k; }
+  function norm(t) { return String(t || "").replace(/\s+/g, " ").trim().slice(0, 160); }
+  /* 받은 목록 + 아직 보내는 중인 내 질문·표시 */
+  function merged(src) {
+    var b = base(), list = (src || []).map(function (x) { var o = {}; for (var k in x) o[k] = x[k]; return o; });
+    if (!b) return list;
+    NET.items("qAdd|" + b).forEach(function (p) { var tx = norm(p.b.text); if (!list.some(function (x) { return x.mine && x.text === tx; })) list.push({ id: "", text: tx, mine: true, same: 0, solved: 0, t: p.at, wait: 1 }); });
+    NET.items("qMark|" + b).forEach(function (p) {
+      var x = list.filter(function (y) { return y.id && y.id === p.b.id; })[0]; if (!x) return;
+      var on = !!p.b.on, f = p.b.kind === "solved" ? "Solved" : "Same", c = p.b.kind === "solved" ? "solved" : "same";
+      if (!!x["me" + f] !== on) { x[c] = Math.max(0, (+x[c] || 0) + (on ? 1 : -1)); x["me" + f] = on; }
+    });
+    return list;
   }
+  NET.watch(function (k) { var b = base(); return b && (k.indexOf("qAdd|" + b) === 0 || k.indexOf("qMark|" + b) === 0); }, function (st, d) {
+    if (st.s === "ok" && d.info && d.info.j && d.info.j.items) { ITEMS = d.info.j.items; ERR = ""; }
+    if (st.s === "bad" && d.key.indexOf("qAdd|") === 0) { MSG = "보내지 못했습니다 (" + (st.e || "오류") + ")"; BACK = d.key.slice(("qAdd|" + base()).length); }   /* 못 보낸 글은 칸에 되돌려 둔다 */
+    else if (d.key.indexOf("qAdd|") === 0) MSG = st.s === "ok" ? "" : NET.say(st, "", d);
+    if (st.s !== "sending") paint();
+  });
+  var MSG = "", BACK = "";
 
   /* 붙일 자리: 첫 이야기(.episode)가 든 탭의 첫 이야기 끝, 정리하기 탭(#wk 앞) */
   var firstEp = document.querySelector(".tab-panel .episode");
@@ -65,20 +86,22 @@
       if (!me()) { box.appendChild(el("p", "qb-sub", "‘우리 반’ 탭에서 반과 별명을 저장하거나 로그인하면 쓸 수 있어요.")); return; }
       if (!end) {
         var row = el("div", "qb-in"), inp = el("input"); inp.maxLength = 160; inp.placeholder = "예: 왜 하필 이 단위를 기준으로 정했을까?";
-        var add = el("button", "btn primary", "남기기"); add.type = "button"; var msg = el("span", "qb-msg");
+        var add = el("button", "btn primary", "남기기"); add.type = "button"; var msg = el("span", "qb-msg", MSG);
         function send() {
           var t = inp.value.trim(); if (t.length < 5) { msg.textContent = "5자 이상 써 주세요."; return; }
-          add.disabled = true; msg.textContent = "보내는 중…";
-          call({ action: "qAdd", text: t }).then(function (j) { if (!j.ok) throw new Error(j.error || "오류"); ITEMS = j.items || []; inp.value = ""; paint(); })
-            .catch(function (e) { msg.textContent = "보내지 못했습니다 (" + e.message + ")"; add.disabled = false; });
+          var k = queue("qAdd", { action: "qAdd", text: t }, norm(t)); if (!k) return;
+          MSG = NET.say(NET.status(k)); inp.value = ""; paint();
         }
+        if (BACK) { inp.value = BACK; BACK = ""; }
         add.addEventListener("click", send); inp.addEventListener("keydown", function (e) { if (e.key === "Enter") send(); });
         row.appendChild(inp); row.appendChild(add); row.appendChild(msg); box.appendChild(row);
       }
       if (ERR) { box.appendChild(el("p", "qb-msg", esc(ERR))); return; }
-      if (!ITEMS) { box.appendChild(el("p", "qb-msg", "불러오는 중…")); return; }
-      if (!ITEMS.length) { box.appendChild(el("p", "qb-msg", end ? "이 단원에서 우리 반이 남긴 질문이 없습니다." : "아직 우리 반 질문이 없습니다. 첫 질문을 남겨 보세요.")); return; }
-      var list = ITEMS.slice().sort(function (x, y) { return (y.same - x.same) || (x.t - y.t); });
+      var all = merged(ITEMS);
+      if (!ITEMS && !all.length) { box.appendChild(el("p", "qb-msg", "불러오는 중…")); return; }
+      if (!all.length) { box.appendChild(el("p", "qb-msg", end ? "이 단원에서 우리 반이 남긴 질문이 없습니다." : "아직 우리 반 질문이 없습니다. 첫 질문을 남겨 보세요.")); return; }
+      if (STALE && !bi) box.appendChild(el("p", "qb-msg", NET.ago(STALE) + " 받은 목록입니다 · 새로 불러오는 중…"));
+      var list = all.sort(function (x, y) { return (y.same - x.same) || (x.t - y.t); });
       if (end) {
         var done = list.filter(function (q) { return q.solved > 0 && q.solved >= Math.max(1, Math.ceil((q.same + 1) / 2)); }).length;
         box.appendChild(el("p", "qb-sum", "해결한 질문 " + done + " · 아직 남은 질문 " + (list.length - done)));
@@ -87,24 +110,26 @@
       list.forEach(function (q) {
         var solvedNow = q.solved > 0 && q.solved >= Math.max(1, Math.ceil((q.same + 1) / 2));
         var li = el("li", end && solvedNow ? "solved" : "");
-        li.appendChild(el("span", "t", esc(q.text) + (q.mine ? "<em>내 질문</em>" : "")));
+        li.appendChild(el("span", "t", esc(q.text) + (q.mine ? "<em>내 질문</em>" : "") + (q.wait ? "<em>보내는 중</em>" : "")));
         var b = el("button", end ? (q.meSolved ? "on" : "") : (q.meSame ? "on" : ""), end ? "✓ 이제 답할 수 있어요 " + (+q.solved || 0) : "🙋 나도 " + ((+q.same || 0) + 1)); b.type = "button";
-        if (!end && q.mine) b.disabled = true;
+        if ((!end && q.mine) || !q.id) b.disabled = true;
         b.addEventListener("click", function () {
-          b.disabled = true;
-          call({ action: "qMark", id: q.id, kind: end ? "solved" : "same", on: end ? !q.meSolved : !q.meSame })
-            .then(function (j) { if (!j.ok) throw new Error(j.error || "오류"); ITEMS = j.items || []; paint(); })
-            .catch(function () { b.disabled = false; });
+          var kind = end ? "solved" : "same";
+          queue("qMark", { action: "qMark", id: q.id, kind: kind, on: end ? !q.meSolved : !q.meSame }, q.id + "|" + kind);
+          paint();   /* 보내기 줄에 든 표시를 바로 그린다(merged) */
         });
         li.appendChild(b); ul.appendChild(li);
       });
       box.appendChild(ul);
     });
   }
+  var STALE = 0;
   function load() {
-    if (!url() || !me()) { paint(); return; }
-    call({ action: "qList" }).then(function (j) { if (!j.ok) throw new Error(j.error || "오류"); ITEMS = j.items || []; ERR = ""; paint(); })
-      .catch(function (e) { ERR = "지금은 불러올 수 없습니다 (" + e.message + ")."; paint(); });
+    var who = me();
+    if (!url() || !who) { paint(); return; }
+    NET.read("qList|" + base() , { post: full({ action: "qList" }, who) },
+      function (j, at) { ITEMS = j.items || []; ERR = ""; STALE = at.stale ? at.at : 0; paint(); },
+      function (e, c) { STALE = 0; if (!c) ERR = "지금은 불러올 수 없습니다 (" + e.message + ")."; paint(); });
   }
   paint();
   var last = 0;

@@ -6,6 +6,198 @@
    컨테이너 폭에 맞춰 줄어들게 한다. 그리기 좌표계는 그대로 900 기준이라
    44개 단원의 그리기 코드는 한 줄도 고치지 않아도 된다.
    ========================================================================= */
+/* ---------- 공유 뒷단(Apps Script) 요청 길 — window.sthNet : 학생이 서버 답을 기다리지 않게 ----------
+   뒷단이 느리거나(2~10초) 멈춰도 수업 화면은 막히지 않아야 한다. 요청 모양(주소·action·칸)은 예전 그대로다.
+   · 올리기 send(열쇠, 본문): 이 기기의 보내기 줄(localStorage 'sth-outbox')에 먼저 넣고 바로 돌아온다 → 화면은 '저장됨 · 보내는 중'.
+     같은 열쇠(예: post|반|별명|단원)는 마지막 상태 하나만 남는다 — 뒷단이 학생·단원마다 한 줄을 덮어쓰므로 최신 것만 보내면 된다.
+     연결이 안 되면 줄에 남겨 두고 다음에 쪽을 열 때 · 다시 연결될 때 · 잠시 뒤(15초→45초→2분→5분) 다시 보낸다.
+     '많습니다/잠시 뒤'(뒷단이 바쁨)는 조금 기다렸다 다시, 그 밖의 거절(반 코드·다시 로그인 등)은 줄에서 빼고 까닭을 알린다.
+     로그인 토큰은 줄에 적지 않는다 — 보내는 순간의 로그인에서 붙인다(로그아웃했으면 빈칸 → 뒷단이 거절한다).
+   · 받기 read(열쇠, 요청, 받으면, 못 받으면): 마지막으로 받은 것(localStorage 'sth-netc-…')을 먼저 주고(stale), 새로 받으면 다시 준다.
+   · 상태는 window 의 'sth-net' 이벤트({ key, st: wait|sending|retry|ok|bad, info })와 status(열쇠)로 알 수 있다. */
+(function () {
+  "use strict";
+  if (window.sthNet) return;
+  var QK = "sth-outbox", SK = "sth-outbox-st", CK = "sth-netc-", CIDX = "sth-netc-idx", POST_MS = 25000, GET_MS = 20000, CMAX = 40;
+  var BACK = [15e3, 45e3, 12e4, 3e5], BUSY = /많습니다|잠시 뒤/, MEM = null;
+  function jget(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
+  function jput(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+  function url() { var u = String(window.STH_SHARE_URL || "").trim(), h = window.STH_SHARE_HOSTS; if (u && h && h.length && h.indexOf(location.hostname) < 0) u = ""; return u; }
+  function tokFor(n) { var A = window.sthAccount; return A && A.tokFor ? A.tokFor(n) || "" : ""; }
+  function emit(key, st, info) { try { window.dispatchEvent(new CustomEvent("sth-net", { detail: { key: key, st: st, info: info || {} } })); } catch (e) {} }
+  /* 시간 제한이 있는 fetch — 서버가 답을 안 하면 POST 25초·GET 20초 뒤 포기한다(화면은 처음부터 기다리지 않는다) */
+  function timed(u, init, ms) {
+    var ctl = window.AbortController ? new AbortController() : null;
+    if (ctl) init.signal = ctl.signal;
+    return new Promise(function (ok, no) {
+      var tm = setTimeout(function () { if (ctl) ctl.abort(); no(new Error("응답이 늦습니다")); }, ms);
+      fetch(u, init).then(function (r) { if (!r.ok) throw new Error("서버 " + r.status); return r.json(); })
+        .then(function (j) { clearTimeout(tm); ok(j); }, function (e) { clearTimeout(tm); no(e && e.name === "AbortError" ? new Error("응답이 늦습니다") : e); });
+    });
+  }
+  function post(b, ms) { var u = url(); if (!u) return Promise.reject(new Error("공유가 꺼져 있습니다")); return timed(u, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(b) }, ms || POST_MS); }
+  function getQ(qs) { var u = url(); if (!u) return Promise.reject(new Error("공유가 꺼져 있습니다")); return timed(u + qs, {}, GET_MS); }
+  function withTok(b) { b = JSON.parse(JSON.stringify(b)); if ("t" in b) b.t = tokFor(b.nick); return b; }
+
+  /* ---- 보내기 줄 ---- */
+  function q() { var o = MEM || jget(QK); return o && typeof o === "object" ? o : {}; }
+  function save(Q) { if (jput(QK, Q)) MEM = null; else MEM = Q; }   /* 저장이 막힌 기기: 이 쪽이 열려 있는 동안만 기억 */
+  function stAll() { var a = jget(SK); return a && typeof a === "object" ? a : {}; }
+  function setSt(key, s) {
+    var a = stAll(); if (s) a[key] = s; else delete a[key];
+    var ks = Object.keys(a); if (ks.length > 80) ks.sort(function (x, y) { return (a[x].at || 0) - (a[y].at || 0); }).slice(0, ks.length - 80).forEach(function (k) { delete a[k]; });
+    jput(SK, a);
+  }
+  var waiters = {};
+  function send(key, body) {
+    var b = JSON.parse(JSON.stringify(body)); if ("t" in b) b.t = "";   /* 토큰 자리는 비워 두고 보낼 때 채운다 */
+    var Q = q(), now = Date.now(); Q[key] = { b: b, at: now, n: 0, nx: 0, v: ((Q[key] && Q[key].v) || 0) + 1 }; save(Q);
+    setSt(key, { s: "wait", at: now }); emit(key, "wait");
+    var p = new Promise(function (ok, no) { (waiters[key] = waiters[key] || []).push({ ok: ok, no: no }); });
+    p.catch(function () {});
+    kick(0);
+    return p;
+  }
+  var running = false, timer = null;
+  function kick(ms) { clearTimeout(timer); timer = setTimeout(run, ms || 0); }
+  function due() { var Q = q(), now = Date.now(); return Object.keys(Q).filter(function (k) { return (Q[k].nx || 0) <= now; }).sort(function (a, b) { return Q[a].at - Q[b].at; }); }
+  function schedule() { var Q = q(), ks = Object.keys(Q); if (!ks.length) return; var nx = Math.min.apply(null, ks.map(function (k) { return Q[k].nx || 0; })); kick(Math.max(1000, nx - Date.now())); }
+  function run() {
+    if (running || !url()) return;
+    if (navigator.onLine === false) return;   /* 'online' 이벤트가 다시 깨운다 */
+    var go = function () {
+      return new Promise(function (done) {
+        (function next() {
+          var ks = due(); if (!ks.length || !url()) { done(); return; }
+          one(ks[0]).then(next, next);
+        })();
+      });
+    };
+    running = true;
+    /* 탭 두 개가 같은 줄을 한꺼번에 보내지 않게(되는 브라우저에서만) */
+    var p = navigator.locks && navigator.locks.request ? navigator.locks.request("sth-outbox", { ifAvailable: true }, function (lk) { return lk ? go() : null; }) : go();
+    Promise.resolve(p).then(function () { running = false; schedule(); }, function () { running = false; schedule(); });
+  }
+  function one(key) {
+    var Q = q(), it = Q[key]; if (!it) return Promise.resolve();
+    var b = withTok(it.b), v = it.v;
+    emit(key, "sending", { tries: it.n || 0 });
+    /* 궁금한 것 남기기(qAdd)만 뒷단이 덮어쓰지 않고 한 줄을 더한다. 앞서 보낸 것의 답을 못 받았으면(연결 끊김)
+       다시 보내기 전에 목록(qList)에서 내 같은 글이 이미 있는지 보고, 있으면 보낸 것으로 친다 — 같은 질문이 두 번 생기지 않게 */
+    var pre = b.action === "qAdd" && it.n > 0
+      ? post({ action: "qList", cls: b.cls, nick: b.nick, t: b.t, unit: b.unit }).then(function (j) {
+          var tx = String(b.text || "").replace(/\s+/g, " ").trim().slice(0, 160);
+          return j && j.ok && (j.items || []).some(function (x) { return x && x.mine && String(x.text) === tx; }) ? j : null;
+        }, function () { return null; })
+      : Promise.resolve(null);
+    return pre.then(function (hit) { return hit || post(b); }).then(function (j) {
+      if (j && j.ok) return finish(key, v, "ok", j);
+      var e = (j && j.error) || "오류";
+      if (BUSY.test(e)) return later(key, v, (it.busy || 0) < 3 ? 1500 + Math.random() * 3500 : null, e, true);
+      return finish(key, v, "bad", j, e);   /* 뒷단이 거절 — 같은 것을 다시 보내도 같은 답이다 */
+    }, function (err) { return later(key, v, null, (err && err.message) || "연결 안 됨"); });
+  }
+  function finish(key, v, s, j, e) {
+    var Q = q(), it = Q[key];
+    if (it && it.v !== v) return;   /* 그사이 새 상태가 들어왔다 — 그것을 이어서 보낸다 */
+    if (it) { delete Q[key]; save(Q); }
+    setSt(key, { s: s, at: Date.now(), e: e || "" });
+    emit(key, s, { j: j, error: e || "" });
+    var w = waiters[key] || []; delete waiters[key];
+    w.forEach(function (x) { if (s === "ok") x.ok(j); else { var er = new Error(e || "오류"); er.hard = true; er.j = j; x.no(er); } });
+  }
+  function later(key, v, ms, e, busy) {
+    var Q = q(), it = Q[key]; if (!it) return;
+    if (it.v === v) {
+      if (busy) it.busy = (it.busy || 0) + 1; else it.n = (it.n || 0) + 1;
+      it.nx = Date.now() + (ms != null ? ms : BACK[Math.min(BACK.length - 1, Math.max(0, (it.n || 1) - 1))]); it.e = e; save(Q);
+    }
+    setSt(key, { s: "wait", at: it.at, e: e });
+    emit(key, "retry", { error: e, busy: !!busy });
+  }
+  function status(key) {
+    var it = q()[key], s = stAll()[key];
+    if (it) return { s: "wait", at: it.at, e: it.e || "", tries: it.n || 0 };
+    return s && s.s !== "wait" ? s : null;
+  }
+  /* 로그아웃할 때: 그 학생 이름으로 남은 것을 마지막으로 한 번 보내고(sendBeacon, 답은 못 받는다) 줄·받아 둔 것에서 지운다 — 함께 쓰는 기기용 */
+  function forgetUser(nick, beacon) {
+    if (!nick) return;
+    var Q = q(), u = url();
+    Object.keys(Q).forEach(function (k) {
+      if (!Q[k].b || Q[k].b.nick !== nick) return;
+      if (beacon && u && navigator.sendBeacon) { try { navigator.sendBeacon(u, new Blob([JSON.stringify(withTok(Q[k].b))], { type: "text/plain;charset=utf-8" })); } catch (e) {} }
+      delete Q[k]; setSt(k, null);
+    });
+    save(Q);
+    var idx = jget(CIDX) || {};
+    Object.keys(idx).forEach(function (ck) { if (ck.split("|").indexOf(nick) >= 0) { jput(CK + ck, null); delete idx[ck]; } });
+    jput(CIDX, idx);
+  }
+
+  /* ---- 받기: 받아 둔 것 먼저, 새로 받으면 바꾸기 ---- */
+  var inflight = {};
+  function cached(ck) { var c = jget(CK + ck); return c && c.j ? c : null; }
+  function keep(ck, j) {
+    var idx = jget(CIDX) || {}, now = Date.now(); idx[ck] = now;
+    var ks = Object.keys(idx).sort(function (a, b) { return idx[a] - idx[b]; });
+    while (ks.length > CMAX) { var o = ks.shift(); jput(CK + o, null); delete idx[o]; }
+    if (!jput(CK + ck, { at: now, j: j })) {   /* 자리가 모자라면 오래된 것 절반을 비우고 한 번 더 */
+      ks.slice(0, Math.ceil(ks.length / 2)).forEach(function (o) { if (o !== ck) { jput(CK + o, null); delete idx[o]; } });
+      if (!jput(CK + ck, { at: now, j: j })) delete idx[ck];
+    }
+    jput(CIDX, idx);
+  }
+  /* req = { get: "?action=…" } 또는 { post: 본문(t 는 보낼 때 채움) }. 받으면 onData(j, { at, stale }) — 받아 둔 것이면 stale: true */
+  function read(ck, req, onData, onFail) {
+    var c = cached(ck);
+    if (c && onData) { try { onData(c.j, { at: c.at, stale: true }); } catch (e) { if (window.console) console.error(e); } }
+    if (!url()) { if (onFail) onFail(new Error("공유가 꺼져 있습니다"), c); return c; }
+    var p = inflight[ck];
+    if (!p) {
+      p = inflight[ck] = (req.post ? post(withTok(req.post), GET_MS) : getQ(req.get));
+      p.then(function () { delete inflight[ck]; }, function () { delete inflight[ck]; });
+    }
+    p.then(function (j) {
+      if (!j || !j.ok) { if (onFail) onFail(new Error((j && j.error) || "오류"), c, j); return; }
+      keep(ck, j); if (onData) onData(j, { at: Date.now(), stale: false });
+    }, function (e) { if (onFail) onFail(e, c); });
+    return c;
+  }
+  function ago(at) {
+    var s = Math.max(0, Math.round((Date.now() - (+at || 0)) / 1000));
+    return s < 45 ? "방금" : s < 3600 ? Math.max(1, Math.round(s / 60)) + "분 전" : s < 86400 ? Math.round(s / 3600) + "시간 전" : Math.round(s / 86400) + "일 전";
+  }
+
+  /* 보내기 상태 → 학생에게 보일 한 줄 */
+  function say(s, okText, d) {
+    if (d && d.st === "retry" && d.info && d.info.busy) return "✓ 저장됨 · 친구들이 한꺼번에 올리는 중이라 잠깐 뒤에 보냅니다";
+    if (!s) return "";
+    if (s.s === "wait") return s.e ? "✓ 이 기기에 저장됨 · 연결되면 저절로 보냅니다" : "✓ 저장됨 · 보내는 중…";
+    if (s.s === "ok") return "✓ " + (okText || "보냈습니다") + " (" + ago(s.at) + ")";
+    return "보내지 못했습니다 (" + (s.e || "오류") + ")";
+  }
+  /* 한 열쇠(또는 열쇠를 고르는 함수)의 상태가 바뀔 때마다 fn(상태, 이벤트 내용). 돌려주는 함수를 부르면 그만 듣는다 */
+  function watch(key, fn) {
+    var h = function (ev) { var d = ev.detail || {}; if (typeof key === "function" ? key(d.key) : d.key === key) fn(status(d.key) || { s: d.st, at: Date.now(), e: (d.info && d.info.error) || "" }, d); };
+    window.addEventListener("sth-net", h);
+    return function () { window.removeEventListener("sth-net", h); };
+  }
+
+  window.sthNet = { send: send, status: status, read: read, cached: cached, ago: ago, url: url, forgetUser: forgetUser, say: say, watch: watch,
+    pending: function (pre) { return Object.keys(q()).filter(function (k) { return !pre || k.indexOf(pre) === 0; }).length; },
+    /* 아직 보내지 못한 것(토큰 자리는 빈칸) — 화면에 '보내는 중'으로 먼저 보여 주는 데 쓴다 */
+    items: function (pre) { var Q = q(); return Object.keys(Q).filter(function (k) { return !pre || k.indexOf(pre) === 0; }).map(function (k) { return { key: k, b: Q[k].b, at: Q[k].at }; }); },
+    flush: function () { var Q = q(); Object.keys(Q).forEach(function (k) { Q[k].nx = 0; }); save(Q); kick(0); },
+    /* 바로 답이 필요한 요청(로그인 등)도 같은 시간 제한으로 */
+    post: post, get: getQ };
+  /* 다음에 쪽을 열 때(쪽이 다 그려진 뒤 조금 있다가) · 다시 연결될 때 · 화면에 돌아왔을 때 남은 것을 보낸다 */
+  function boot() { setTimeout(function () { if (Object.keys(q()).length) window.sthNet.flush(); }, 1500); }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
+  window.addEventListener("online", function () { window.sthNet.flush(); });
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible" && Object.keys(q()).length) kick(300); });
+})();
+
 (function () {
   "use strict";
   var root = document.documentElement;
@@ -547,16 +739,21 @@
       });
       if (b3) b3.addEventListener("click", function () {
         var stx = rv.querySelector(".rv-st"); if (!url) { stx.textContent = "공유가 꺼져 있습니다."; return; }
-        b3.disabled = true; stx.textContent = "보내는 중…";
-        fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "vote", cls: me.cls, nick: me.nick, t: me.t || "", unit: String(UNIT || "").replace(/^sth-/, ""), key: K,
-                                 a: STATE[K + "I"], b: typeof STATE[K + "_2I"] === "number" ? STATE[K + "_2I"] : "" }) })
-          .then(function (r) { return r.json(); })
-          .then(function (j) { if (!j.ok) throw new Error(j.error || "오류"); stx.textContent = "✓ 보냈습니다"; try { sessionStorage.setItem(VSENT, "1"); } catch (e) {} })
-          .catch(function (e) { stx.textContent = "보내지 못했습니다 (" + e.message + "). 잠시 뒤 다시 눌러 보세요."; })
-          .then(function () { b3.disabled = false; });
+        /* 기다리지 않게: 이 기기 보내기 줄에 넣고 바로 '저장됨 · 보내는 중'. 같은 반·별명·단원·열쇠는 뒷단이 덮어쓴다 */
+        VKEY = "vote|" + me.cls + "|" + me.nick + "|" + String(UNIT || "").replace(/^sth-/, "") + "|" + K;
+        window.sthNet.send(VKEY, { action: "vote", cls: me.cls, nick: me.nick, t: me.t || "", unit: String(UNIT || "").replace(/^sth-/, ""), key: K,
+                                 a: STATE[K + "I"], b: typeof STATE[K + "_2I"] === "number" ? STATE[K + "_2I"] : "" });
+        try { sessionStorage.setItem(VSENT, "1"); } catch (e) {}
+        stx.textContent = window.sthNet.say(window.sthNet.status(VKEY));
       });
+      /* 전에 보낸 적이 있으면 그 상태를 보인다(보내는 중 · 보냈음 · 못 보냄) */
+      if (b3 && me.cls && me.nick) {
+        VKEY = "vote|" + me.cls + "|" + me.nick + "|" + String(UNIT || "").replace(/^sth-/, "") + "|" + K;
+        var st0 = window.sthNet.status(VKEY); if (st0) rv.querySelector(".rv-st").textContent = window.sthNet.say(st0);
+      }
     }
+    var VKEY = "";
+    window.sthNet.watch(function (k) { return k === VKEY; }, function (st, d) { var stx = rv.querySelector(".rv-st"); if (stx && !again) stx.textContent = window.sthNet.say(st, "보냈습니다", d); });
     /* 다시 고르는 동안에는 처음 고른 보기를 바꾸지 않는다 — 단추의 원래 동작보다 먼저 가로챈다 */
     box.addEventListener("click", function (e) {
       if (!again) return;

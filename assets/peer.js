@@ -30,12 +30,16 @@
     return li || null;
   }
   function myText() { try { return String(((JSON.parse(localStorage.getItem("sth-" + UID) || "{}").w || {})[FIELD]) || "").replace(/\s+/g, " ").trim(); } catch (e) { return ""; } }
+  function full(body, who) { body.cls = who.cls; body.nick = who.nick; body.t = who.t || ""; body.unit = UID; return body; }
+  /* 기다리지 않게(theme.js 의 sthNet): 내기·평가는 보내기 줄에 넣고 바로 돌아온다(뒷단이 글쓴이·평가자마다 덮어쓴다).
+     받기는 시간 제한을 두고, 내 글·받은 평가는 마지막으로 받은 것을 먼저 보인다 */
+  var NET = window.sthNet;
   function call(body) {
     var who = me(), u = url(); if (!u || !who) return Promise.reject(new Error("공유가 꺼져 있습니다"));
-    body.cls = who.cls; body.nick = who.nick; body.t = who.t || ""; body.unit = UID;
-    return fetch(u, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) })
-      .then(function (r) { return r.json(); });
+    return NET.post(full(body, who));
   }
+  function queue(key, body) { var who = me(); if (!url() || !who) return ""; var k = key + "|" + who.cls + "|" + who.nick + "|" + UID + (body.id ? "|" + body.id : ""); NET.send(k, full(body, who)); return k; }
+  function putKey() { var who = me(); return who ? "peerPut|" + who.cls + "|" + who.nick + "|" + UID : ""; }
 
   if (!document.getElementById("peer-css")) {
     var css = document.createElement("style"); css.id = "peer-css";
@@ -65,11 +69,12 @@
     if (!mt && sent) mine.appendChild(el("p", "pr-sub", "돌려 읽기에 냈던 글입니다. 고치려면 정리하기 탭에서 다시 쓴 뒤 여기서 다시 내세요."));
     else if (mt && sent && mt !== sent) mine.appendChild(el("p", "pr-sub", "정리하기 글이 낸 글과 다릅니다. ‘고친 글로 다시 내기’를 누르면 친구들에게 새 글이 보입니다."));
     var put = el("button", "btn primary", state.put ? "고친 글로 다시 내기" : "돌려 읽기에 내 글 내기"); put.type = "button"; put.disabled = mt.length < 10;
-    var pm = el("span", "pr-msg", state.put ? "✓ 냈습니다 — 친구들이 이름 없이 읽습니다." : (mt && mt.length < 10 ? "10자 이상 써야 낼 수 있어요." : ""));
+    var pst = NET.status(putKey());
+    var pm = el("span", "pr-msg pr-put-msg", pst && pst.s !== "ok" ? NET.say(pst) : state.put ? "✓ 냈습니다 — 친구들이 이름 없이 읽습니다." : (mt && mt.length < 10 ? "10자 이상 써야 낼 수 있어요." : ""));
     put.addEventListener("click", function () {
-      put.disabled = true; pm.textContent = "보내는 중…";
-      call({ action: "peerPut", text: mt }).then(function (j) { if (!j.ok) throw new Error(j.error || "오류"); state.put = 1; refresh(state); })
-        .catch(function (e) { pm.textContent = "보내지 못했습니다 (" + e.message + ")"; put.disabled = false; });
+      /* 바로 '냈음'으로 보이고, 뒷단 답은 뒤에서 받는다 */
+      queue("peerPut", { action: "peerPut", text: mt });
+      state.put = 1; state.mine = { text: mt, got: (state.mine && state.mine.got) || [] }; paint(state);
     });
     var r1 = el("div", "btn-row"); r1.appendChild(put); r1.appendChild(pm); mine.appendChild(r1);
     box.appendChild(mine);
@@ -90,10 +95,15 @@
       var sb = el("button", "btn primary", "평가 보내기"); sb.type = "button"; var sm = el("span", "pr-msg");
       sb.addEventListener("click", function () {
         if (!g.value.trim() && !f.value.trim()) { sm.textContent = "좋은 점이나 고칠 점을 한 줄 써 주세요."; return; }
-        sb.disabled = true; sm.textContent = "보내는 중…";
-        call({ action: "peerRate", id: it.id, c: chk.map(function (x) { return x.checked ? 1 : 0; }), good: g.value.trim(), fix: f.value.trim() })
-          .then(function (j) { if (!j.ok) throw new Error(j.error || "오류"); sm.textContent = "✓ 보냈습니다. 고마워요!"; chk.concat([g, f]).forEach(function (x) { x.disabled = true; }); state.rated = (state.rated || 0) + 1; })
-          .catch(function (e) { sm.textContent = "보내지 못했습니다 (" + e.message + ")"; sb.disabled = false; });
+        var rk = queue("peerRate", { action: "peerRate", id: it.id, c: chk.map(function (x) { return x.checked ? 1 : 0; }), good: g.value.trim(), fix: f.value.trim() });
+        if (!rk) { sm.textContent = "공유가 꺼져 있습니다"; return; }
+        sb.disabled = true; chk.concat([g, f]).forEach(function (x) { x.disabled = true; }); state.rated = (state.rated || 0) + 1;
+        sm.textContent = NET.say(NET.status(rk));
+        var off = NET.watch(rk, function (st, d) {
+          sm.textContent = st.s === "ok" ? "✓ 보냈습니다. 고마워요!" : NET.say(st, "", d);
+          if (st.s === "ok") off();
+          if (st.s === "bad") { off(); sb.disabled = false; chk.concat([g, f]).forEach(function (x) { x.disabled = false; }); state.rated = Math.max(0, (state.rated || 1) - 1); }
+        });
       });
       var r3 = el("div", "btn-row"); r3.appendChild(sb); r3.appendChild(sm); c.appendChild(r3);
       area.appendChild(c);
@@ -114,15 +124,30 @@
       box.appendChild(gb);
     }
   }
+  function apply(state, j, fetchItems, staleAt) {
+    /* 내 글을 방금 냈는데 아직 보내는 중이거나, 받아 둔 것이 내기 전 것이면 이 기기의 글을 믿는다 */
+    var pst = NET.status(putKey()), mine = j.mine;
+    if (pst && (pst.s === "wait" || (pst.s === "ok" && staleAt && pst.at > staleAt)) && state.mine) mine = { text: state.mine.text, got: (j.mine && j.mine.got) || state.mine.got || [] };
+    state.mine = mine; state.put = mine ? 1 : 0; state.rated = Math.max(+j.rated || 0, fetchItems ? 0 : (+state.rated || 0));
+    if (fetchItems) state.items = j.items || [];
+  }
   function refresh(state, fetchItems) {
     if (!url() || !me()) { paint(state); return; }
-    call({ action: "peerGet", n: 2 }).then(function (j) {
-      if (!j.ok) throw new Error(j.error || "오류");
-      state.mine = j.mine; state.put = j.mine ? 1 : 0; state.rated = j.rated;
-      if (fetchItems) state.items = j.items || [];
-      paint(state);
-    }).catch(function (e) { paint(state); var p = el("p", "pr-sub", "지금은 불러올 수 없습니다 (" + esc(e.message) + "). 잠시 뒤 다시 해 보세요."); box.appendChild(p); });
+    function fail(e) { paint(state); var p = el("p", "pr-sub", "지금은 불러올 수 없습니다 (" + esc(e.message) + "). 잠시 뒤 다시 해 보세요."); box.appendChild(p); }
+    if (fetchItems) {   /* 친구 글 받기는 학생이 눌렀을 때만 — 매번 새로(무작위라 받아 두지 않는다) */
+      call({ action: "peerGet", n: 2 }).then(function (j) { if (!j.ok) throw new Error(j.error || "오류"); apply(state, j, true); paint(state); }).catch(fail);
+      return;
+    }
+    var who = me();
+    NET.read("peerGet|" + who.cls + "|" + who.nick + "|" + UID, { post: full({ action: "peerGet", n: 2 }, who) },
+      function (j, at) { apply(state, j, false, at.stale ? at.at : 0); paint(state); },
+      function (e, c) { if (!c) fail(e); });
   }
+  NET.watch(function (k) { return k === putKey(); }, function (st, d) {
+    var pm = box.querySelector(".pr-put-msg"); if (pm) pm.textContent = st.s === "ok" ? "✓ 냈습니다 — 친구들이 이름 없이 읽습니다." : NET.say(st, "", d);
+    if (st.s === "ok") refresh(S, false);
+    if (st.s === "bad") { S.put = 0; refresh(S, false); }
+  });
   var S = {};
   paint(S);
   var loaded = false;

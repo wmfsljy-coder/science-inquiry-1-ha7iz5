@@ -159,26 +159,31 @@
       return o;
     }
 
+    /* 기다리지 않게: 마지막으로 받은 목록(이 기기)을 먼저 '3분 전' 표시와 함께 보여 주고, 새로 받으면 바꾼다(theme.js 의 sthNet) */
+    var NET = window.sthNet, lastItems = null, listFailed = false;
+    function staleNote(at) { return listFailed ? "지금은 새로 불러올 수 없어 " + NET.ago(at) + " 받은 화면을 보여 줍니다. 잠시 뒤 ↻ 새로 고침을 눌러 보세요." : NET.ago(at) + " 받은 화면입니다 · 새로 불러오는 중…"; }
+    function postKey(o) { return "post|" + o.cls + "|" + o.nick + "|" + opt.unit; }
     function load() {
       paintMine();
       var o = need(); if (!o) { logBox.innerHTML = ""; return; }
-      board.innerHTML = ""; board.appendChild(el("p", "sh-note", "불러오는 중…"));
-      fetch(URL_ + "?action=list&cls=" + encodeURIComponent(o.cls) + "&unit=" + encodeURIComponent(opt.unit))
-        .then(function (r) { return r.json(); })
-        .then(function (j) { if (!j.ok) throw new Error(j.error || "오류"); paintBoard(j.items || [], o); })
-        .catch(function (e) { board.innerHTML = ""; board.appendChild(el("p", "sh-note", "지금은 우리 반 화면을 불러올 수 없습니다. 선생님이 공유를 켜는 중일 수 있습니다. 잠시 뒤 ↻ 새로 고침을 눌러 보세요.")); });
+      var got = false; listFailed = false;
+      NET.read("list|" + o.cls + "|" + opt.unit, { get: "?action=list&cls=" + encodeURIComponent(o.cls) + "&unit=" + encodeURIComponent(opt.unit) },
+        function (j, at) { got = true; paintBoard(j.items || [], o, at.stale ? at.at : 0); },
+        function (e, c) {
+          if (c) { listFailed = true; var n = board.querySelector(".sh-stale"); if (n) n.textContent = staleNote(c.at); return; }
+          board.innerHTML = ""; board.appendChild(el("p", "sh-note", "지금은 우리 반 화면을 불러올 수 없습니다. 선생님이 공유를 켜는 중일 수 있습니다. 잠시 뒤 ↻ 새로 고침을 눌러 보세요."));
+        });
+      if (!got) { board.innerHTML = ""; board.appendChild(el("p", "sh-note", "불러오는 중…")); }
       loadLog(o);
     }
 
     /* ---- 우리 반 활동 기록 : 이 반이 지금까지 어느 단원에서 무엇을 했는지 ---- */
     function loadLog(o) {
-      logBox.innerHTML = "";
-      logBox.appendChild(el("h4", null, "우리 반 활동 기록"));
-      var p = el("p", "sh-note", "불러오는 중…"); logBox.appendChild(p);
-      fetch(URL_ + "?action=classlog&cls=" + encodeURIComponent(o.cls))
-        .then(function (r) { return r.json(); })
-        .then(function (j) { if (!j.ok) throw new Error(j.error || "오류"); paintLog(j.units || [], o); })
-        .catch(function (e) { p.textContent = "활동 기록은 잠시 뒤에 보입니다."; });
+      var got = false;
+      NET.read("classlog|" + o.cls, { get: "?action=classlog&cls=" + encodeURIComponent(o.cls) },
+        function (j) { got = true; paintLog(j.units || [], o); },
+        function (e, c) { if (!c) { var p = logBox.querySelector(".sh-note"); if (p) p.textContent = "활동 기록은 잠시 뒤에 보입니다."; } });
+      if (!got) { logBox.innerHTML = ""; logBox.appendChild(el("h4", null, "우리 반 활동 기록")); logBox.appendChild(el("p", "sh-note", "불러오는 중…")); }
     }
     function paintLog(units, o) {
       /* 학생에게는 이 단원 기록만(다른 단원 이름도 보이지 않게). 교사 기기에서는 반 전체 */
@@ -203,9 +208,17 @@
       logBox.appendChild(list);
     }
 
-    function paintBoard(items, o) {
+    function paintBoard(items, o, staleAt) {
+      lastItems = { items: items, o: o, staleAt: staleAt };
+      /* 내가 방금 올린 것이 아직 보내기 줄에 있으면(또는 받아 둔 목록이 그전 것이면) 내 카드는 이 기기의 것으로 보인다 */
+      var pend = NET.status(postKey(o));
+      if (pend && (pend.s === "wait" || (pend.s === "ok" && staleAt && pend.at > staleAt))) {   /* 받아 둔 목록이 내가 올리기 전 것이면 내 카드는 이 기기의 것으로 */
+        var mineIt = { nick: o.nick, results: myResults(true), line: withLine && withLine.checked ? myLine() : "", t: pend.at, wait: pend.s === "wait" ? 1 : 0 };
+        items = items.filter(function (it) { return !isMine(it.nick, o.nick); }).concat([mineIt]);
+      }
       board.innerHTML = "";
       board.appendChild(el("h4", null, o.cls + "반 · " + items.length + "명이 올렸습니다"));
+      if (staleAt) board.appendChild(el("p", "sh-note sh-stale", staleNote(staleAt)));
       var tally = el("div", "sh-tally");
       allRows().forEach(function (row) {
         var n = items.filter(function (it) { return it.results && it.results[row.key]; }).length;
@@ -218,7 +231,7 @@
       items.forEach(function (it) {
         var mine = isMine(it.nick, o.nick);
         var c = el("div", "sh-card" + (mine ? " me" : ""));
-        c.appendChild(el("div", "sh-nick", it.nick + (mine ? " (나)" : "")));
+        c.appendChild(el("div", "sh-nick", it.nick + (mine ? " (나)" : "") + (it.wait ? " · 보내는 중" : "")));
         allRows().forEach(function (row) {
           if (!it.results || !it.results[row.key]) return;
           var p = el("p"); p.appendChild(el("b", null, row.label + " ")); p.appendChild(document.createTextNode(it.results[row.key])); c.appendChild(p);
@@ -237,33 +250,24 @@
         msg.textContent = (WORKS.length && !ROWS.length) ? "정리하기를 한 칸이라도 쓴 뒤에 올릴 수 있습니다." : "이야기를 하나 이상 해결한 뒤에 올릴 수 있습니다.";
         return;
       }
-      postBtn.disabled = true; msg.textContent = "올리는 중…";
       var rr = { _ev: evidence() }; Object.keys(r).forEach(function (k) { rr[k] = r[k]; });
-      var body = JSON.stringify({ action: "post", cls: o.cls, nick: o.nick, t: tok(o.nick), unit: opt.unit, unitLabel: opt.unitLabel || "", results: rr, line: withLine && withLine.checked ? myLine() : "" });
-      /* 반 전체가 한꺼번에 누르면 시트에 줄이 생긴다. 뒷단이 '많습니다' 라고 하면
-         조금씩 다른 시간만큼 기다렸다가 스스로 다시 보낸다(최대 세 번). */
-      function send(tries) {
-        if (!URL_) return Promise.reject(new Error("공유가 꺼져 있습니다"));
-        return fetch(URL_, {
-          method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },      // 단순 요청이라 사전 요청(preflight)이 없다
-          body: body
-        }).then(function (res) { return res.json(); })
-          .then(function (j) {
-            if (!j.ok && /많습니다|잠시 뒤/.test(j.error || "") && tries < 3) {
-              msg.textContent = "친구들이 한꺼번에 올리는 중이라 잠깐 기다립니다…";
-              return new Promise(function (ok) { setTimeout(ok, 1500 + Math.random() * 3500); })
-                .then(function () { return send(tries + 1); });
-            }
-            return j;
-          });
-      }
-      send(1)
-        .then(function (j) { if (!j.ok) throw new Error(j.error || "오류"); msg.textContent = "올렸습니다."; load(); })
-        .catch(function (e) { msg.textContent = "올리지 못했습니다. (" + e.message + ")"; })
-        .then(function () { postBtn.disabled = false; setTimeout(function () { msg.textContent = ""; }, 2500); });
+      /* 기다리지 않게: 이 기기 보내기 줄에 넣고 바로 '저장됨 · 보내는 중'. 뒷단이 반·별명·단원 한 줄을 덮어쓰므로 같은 열쇠는 마지막 것만 간다.
+         뒷단이 '많습니다'면 조금씩 다른 시간만큼 기다렸다 다시, 연결이 안 되면 다음에 쪽을 열 때·다시 연결될 때 보낸다(sthNet). */
+      NET.send(postKey(o), { action: "post", cls: o.cls, nick: o.nick, t: tok(o.nick), unit: opt.unit, unitLabel: opt.unitLabel || "", results: rr, line: withLine && withLine.checked ? myLine() : "" });
+      msg.textContent = NET.say(NET.status(postKey(o)));
+      if (lastItems && lastItems.o.cls === o.cls && lastItems.o.nick === o.nick) paintBoard(lastItems.items, o, lastItems.staleAt);
+    });
+    /* 보내기 상태가 바뀌면 글을 고치고, 뒷단이 받았으면 목록을 새로 받는다 */
+    var msgT = null;
+    NET.watch(function (k) { var o = me(); return o.cls && o.nick && k === postKey(o); }, function (st, d) {
+      clearTimeout(msgT);
+      msg.textContent = NET.say(st, st.s === "ok" ? "올렸습니다" : "", d);
+      if (st.s === "ok") { load(); msgT = setTimeout(function () { msg.textContent = ""; }, 4000); }
+      if (st.s === "bad" && lastItems) paintBoard(lastItems.items, lastItems.o, lastItems.staleAt);
     });
     reBtn.addEventListener("click", load);
     window.addEventListener("tab-shown", function () { if (!mount.closest("[hidden]")) load(); });
     paintMine(); need();
+    (function () { var o = me(), st = o.cls && o.nick ? NET.status(postKey(o)) : null; if (st && st.s !== "ok") msg.textContent = NET.say(st); })();
   };
 })();

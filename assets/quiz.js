@@ -496,14 +496,13 @@
         var me = JSON.parse(localStorage.getItem("sth-me") || "{}"), url = String(window.STH_SHARE_URL || "").trim(), hosts = window.STH_SHARE_HOSTS;
         if (url && hosts && hosts.length && hosts.indexOf(location.hostname) < 0) url = "";
         var uid = window.sthUnitId ? window.sthUnitId() : "";
-        if (url && me.cls && uid) fetch(url + "?action=classmiss&cls=" + encodeURIComponent(me.cls) + "&unit=" + encodeURIComponent(uid))
-          .then(function (r) { return r.json(); })
-          .then(function (j) {
-            if (!j.ok) return;
+        /* 마지막으로 받은 것을 먼저 쓰고 새로 받으면 바꾼다(theme.js 의 sthNet — 서버가 느려도 기다리지 않는다) */
+        if (url && me.cls && uid && window.sthNet) window.sthNet.read("classmiss|" + me.cls + "|" + uid, { get: "?action=classmiss&cls=" + encodeURIComponent(me.cls) + "&unit=" + encodeURIComponent(uid) },
+          function (j) {
             var by = {}; items.forEach(function (it) { by[it.id] = it; });
             cls = (j.items || []).filter(function (x) { return by[x.id] && x.n >= 2; }).slice(0, 5).map(function (x) { return by[x.id]; });
             paintR();
-          }).catch(function () {});
+          }, function () {});
       } catch (e) {}
     }
 

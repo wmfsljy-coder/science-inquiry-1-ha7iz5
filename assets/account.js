@@ -84,6 +84,8 @@
   function call(body) {
     if (MOCK) return new Promise(function (ok) { setTimeout(function () { ok(Mock(JSON.parse(JSON.stringify(body)))); }, 250); });
     if (!URL_) return Promise.resolve({ ok: false, error: "공유 주소가 꺼져 있습니다" });
+    /* 학생 요청은 시간 제한(30초)을 둔다 — 서버가 멈춰도 '확인 중'에 갇히지 않게(theme.js 의 sthNet). 선생님 화면 요청(명단 넣기 등)은 오래 걸려도 기다린다 */
+    if (window.sthNet && window.sthNet.url() === URL_ && /^acc(Check|Login|Me|Logout|Sync|Pull|Class)$/.test(String(body.action || ""))) return window.sthNet.post(body, 30000);
     return fetch(URL_, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) }).then(function (r) { return r.json(); });
   }
   window.sthAccCall = call;   /* 선생님 화면도 같은 길로 부른다 */
@@ -238,6 +240,8 @@
     var b = el("button", "btn", "로그아웃"); b.type = "button";
     b.addEventListener("click", function () {
       var t = a.t; flushAll(true);
+      /* 이 학생 이름('@학번')으로 보내기 줄에 남은 것은 마지막으로 한 번 보내고, 줄·받아 둔 목록에서 지운다(다음 사람이 이어받지 않게) */
+      if (window.sthNet && a.me && a.me.sid) window.sthNet.forgetUser("@" + a.me.sid, true);
       /* 함께 쓰는 기기: 서버에 다 올라간 단원 기록은 이 기기에서 지운다(다음 사람이 이어받지 않게). 못 보낸 것은 남긴다 */
       try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf(SYNC) !== 0) return; var u = k.slice(SYNC.length), q = get(localStorage, k); if (q && q.raw === localStorage.getItem("sth-" + u)) { localStorage.removeItem("sth-" + u); localStorage.removeItem(k); } }); } catch (e) {}
       call({ action: "accLogout", t: t }).catch(function () {}); setAcc(null); menu.parentNode.removeChild(menu); menu = null; location.reload();
@@ -317,7 +321,8 @@
   /* ---- 다른 기기에서 한 기록 불러오기: 이 기기에 없는 항목만 채운다(이 기기의 것이 먼저) ---- */
   function pullNow(fromLogin) {
     var A = acc(), u = unitId(); if (!A || !u) return;
-    var flag = "sth-accpulled-" + u; try { if (!fromLogin && sessionStorage.getItem(flag)) return; sessionStorage.setItem(flag, "1"); } catch (e) {}
+    /* 이번 탭에서 이미 불러왔으면(로그인 확인도 끝남) 안 보낸 기록만 바로 보낸다 — 다음에 쪽을 열 때 못 보낸 것을 보내는 길 */
+    var flag = "sth-accpulled-" + u; try { if (!fromLogin && sessionStorage.getItem(flag)) { if (canSend() && pending()) flushAll(); return; } sessionStorage.setItem(flag, "1"); } catch (e) {}
     var list = syncUnits();
     call({ action: "accPull", t: A.t, units: list }).then(function (j) {
       if (!j || !j.ok) { if (j && j.relogin) { setAcc(null); lockAll(); } return; }
@@ -392,7 +397,7 @@
   }
   function paintClass(box, j, it, staleAt) {
     var my = {}; try { my = (JSON.parse(localStorage.getItem("sth-" + unitId()) || "{}").s) || {}; } catch (e) {}
-    var h = "<div class='ac-head'><b>📊 우리 반 한눈에</b> — " + esc(j.cls) + " · 로그인해서 이 단원을 한 친구 <b>" + N(j.n) + "명</b> / " + N(j.total) + "명 <span class='msg'>(이름 없이 센 것" + (staleAt ? " · " + new Date(staleAt).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) + " 결과, 새로 고치는 중…" : "") + ")</span> <button type='button' class='btn ac-re'>↻</button></div>";
+    var h = "<div class='ac-head'><b>📊 우리 반 한눈에</b> — " + esc(j.cls) + " · 로그인해서 이 단원을 한 친구 <b>" + N(j.n) + "명</b> / " + N(j.total) + "명 <span class='msg'>(이름 없이 센 것" + (staleAt ? " · " + (window.sthNet ? window.sthNet.ago(staleAt) : new Date(staleAt).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })) + " 결과, 새로 고치는 중…" : "") + ")</span> <button type='button' class='btn ac-re'>↻</button></div>";
     if (j.few) { box.innerHTML = h + "<p class='msg'>아직 이 단원을 한 친구가 3명보다 적어서 모아 보여 줄 수 없어요. 친구들이 더 하면 보입니다.</p>"; box.querySelector(".ac-re").onclick = loadClass; return; }
     var A = j.agg && typeof j.agg === "object" ? j.agg : {}, G = it.g || {}, QT = it.q || {};
     function pct(a, b) { a = N(a); b = N(b); return b ? Math.max(0, Math.min(100, Math.round(a / b * 100))) : 0; }

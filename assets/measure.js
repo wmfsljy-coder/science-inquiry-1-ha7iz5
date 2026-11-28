@@ -185,14 +185,29 @@
       if (!o.cls || !o.nick) { plot.innerHTML = ""; plot.appendChild(el("p", "ms-note", "‘우리 반’ 탭에서 반과 별명을 먼저 저장하면 반 친구들의 값과 견주어 볼 수 있습니다.")); return null; }
       return o;
     }
+    /* 기다리지 않게(theme.js 의 sthNet): 반 값은 마지막으로 받은 것을 먼저 보여 주고 새로 받으면 바꾼다. 올리기는 보내기 줄에 넣고 바로 돌아온다 */
+    var NET = window.sthNet, last = null;
+    function mkey(o) { return "measure|" + o.cls + "|" + o.nick + "|" + opt.unit + "|" + opt.key; }
+    function withMine(items, o) {   /* 아직 보내는 중인 내 값은 이 기기의 것으로 */
+      var st = NET.status(mkey(o)), m = mine();
+      if (!st || !m.v.length || !(st.s === "wait" || (st.s === "ok" && last && last.at && st.at > last.at))) return items;
+      return items.filter(function (it) { return !isMine(it.nick, o.nick); }).concat([{ nick: o.nick, v: m.v, g: m.g }]);
+    }
+    var failed = false;
+    function staleNote(at) { return failed ? "지금은 새로 불러올 수 없어 " + NET.ago(at) + " 받은 값을 보여 줍니다." : NET.ago(at) + " 받은 값입니다 · 새로 불러오는 중…"; }
+    function stale(at) { var n = el("p", "ms-note ms-stale", staleNote(at)); plot.insertBefore(n, plot.firstChild); }
+    function repaint() { if (last) { paintPlot(withMine(last.items, last.o), last.o); if (last.at) stale(last.at); } }
     function load() {
       paintMine();
       var o = who(); if (!o) return;
-      plot.innerHTML = ""; plot.appendChild(el("p", "ms-note", "불러오는 중…"));
-      fetch(URL_ + "?action=measures&cls=" + encodeURIComponent(o.cls) + "&unit=" + encodeURIComponent(opt.unit) + "&key=" + encodeURIComponent(opt.key))
-        .then(function (r) { return r.json(); })
-        .then(function (j) { if (!j.ok) throw new Error(j.error || "오류"); paintPlot(j.items || [], o); })
-        .catch(function () { plot.innerHTML = ""; plot.appendChild(el("p", "ms-note", "지금은 반 값을 불러올 수 없습니다. 잠시 뒤 ↻ 새로 고침을 눌러 보세요.")); });
+      var got = false; failed = false;
+      NET.read("measures|" + o.cls + "|" + opt.unit + "|" + opt.key, { get: "?action=measures&cls=" + encodeURIComponent(o.cls) + "&unit=" + encodeURIComponent(opt.unit) + "&key=" + encodeURIComponent(opt.key) },
+        function (j, at) { got = true; last = { items: j.items || [], o: o, at: at.stale ? at.at : 0 }; repaint(); },
+        function (e, c) {
+          if (c) { failed = true; var n = plot.querySelector(".ms-stale"); if (n) n.textContent = staleNote(c.at); return; }
+          plot.innerHTML = ""; plot.appendChild(el("p", "ms-note", "지금은 반 값을 불러올 수 없습니다. 잠시 뒤 ↻ 새로 고침을 눌러 보세요."));
+        });
+      if (!got) { plot.innerHTML = ""; plot.appendChild(el("p", "ms-note", "불러오는 중…")); }
     }
     post.addEventListener("click", function () {
       var r = read(); msg.className = "ms-msg";
@@ -203,23 +218,16 @@
       if (window.sthState) window.sthState(SK, m);
       paintMine();
       var o = who(); if (!o) { msg.textContent = "내 기기에 저장했습니다."; return; }
-      post.disabled = true; msg.textContent = "올리는 중…";
-      var body = JSON.stringify({ action: "measure", cls: o.cls, nick: o.nick, t: tok(o.nick), unit: opt.unit, key: opt.key, v: m.v, g: m.g });
-      function send(tries) {
-        if (!URL_) return Promise.reject(new Error("공유가 꺼져 있습니다"));
-        return fetch(URL_, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: body })
-          .then(function (res) { return res.json(); })
-          .then(function (j) {
-            if (!j.ok && /많습니다|잠시 뒤/.test(j.error || "") && tries < 3)
-              return new Promise(function (ok) { setTimeout(ok, 1500 + Math.random() * 3500); }).then(function () { return send(tries + 1); });
-            if (!j.ok) throw new Error(j.error || "오류");
-            return j;
-          });
-      }
-      send(0).then(function (j) { msg.textContent = j.updated ? "고쳐 올렸습니다." : "올렸습니다."; load(); })
-        .catch(function (e) { msg.textContent = "올리지 못했습니다 (" + e.message + "). 잠시 뒤 다시 눌러 보세요."; msg.className = "ms-msg bad"; })
-        .then(function () { post.disabled = false; });
+      NET.send(mkey(o), { action: "measure", cls: o.cls, nick: o.nick, t: tok(o.nick), unit: opt.unit, key: opt.key, v: m.v, g: m.g });
+      msg.textContent = NET.say(NET.status(mkey(o)));
+      repaint();
     });
+    NET.watch(function (k) { var o = me(); return o.cls && o.nick && k === mkey(o); }, function (st, d) {
+      msg.className = "ms-msg" + (st.s === "bad" ? " bad" : "");
+      msg.textContent = NET.say(st, st.s === "ok" ? (d.info && d.info.j && d.info.j.updated ? "고쳐 올렸습니다" : "올렸습니다") : "", d);
+      if (st.s === "ok") load(); else if (st.s === "bad") repaint();
+    });
+    (function () { var o = me(), st = URL_ && o.cls && o.nick ? NET.status(mkey(o)) : null; if (st && st.s !== "ok") { msg.textContent = NET.say(st); if (st.s === "bad") msg.className = "ms-msg bad"; } })();
     re.addEventListener("click", load);
     /* 반 값은 상자가 처음 화면에 보일 때 한 번 불러온다(탭을 열지 않은 학생까지 뒷단을 부르지 않게) */
     paintMine();
